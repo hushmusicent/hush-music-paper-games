@@ -20,6 +20,9 @@ export const TabooGame: React.FC<TabooGameProps> = ({ mode, names, onFinish }) =
   const [inputGuess, setInputGuess] = useState('');
   const [lastMsg, setLastMsg] = useState('');
   const [over, setOver] = useState(false);
+  // pass & play: the card stays covered until the clue-giver peeks,
+  // so guessers never see the word or its taboo words
+  const [showCard, setShowCard] = useState(false);
 
   const card = TABOO_BANK[deck[cardIdx % deck.length]];
 
@@ -71,6 +74,7 @@ export const TabooGame: React.FC<TabooGameProps> = ({ mode, names, onFinish }) =
       Sound.click();
     }
     setSeen(s => s + 1);
+    setShowCard(false);
     setCardIdx(i => i + 1);
     setLastMsg(msg);
     setInputGuess('');
@@ -102,38 +106,52 @@ export const TabooGame: React.FC<TabooGameProps> = ({ mode, names, onFinish }) =
         {lastMsg && <div className="msg my-2">{lastMsg}</div>}
 
         {mode === 'hotseat' ? (
-          <div>
-            <p className="mb-2">
-              🙈 <b>Clue-giver only:</b> the word is{' '}
-              <span className="text-xl font-black text-[#17457e]">
-                {card.target}
-              </span>
-            </p>
-            <p className="text-sm mb-3">
-              🚫 Never say: <b>{card.taboo.join(', ')}</b> (or the word itself!)
-            </p>
-            <p className="muted text-xs mb-4">
-              Describe it out loud. When the others get it, tap Correct.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  handleNext(true, `✔️ Correct — it was ${card.target}!`)
-                }
-                className="btn flex-1"
-              >
-                ✔️ They guessed it
-              </button>
-              <button
-                onClick={() =>
-                  handleNext(false, `⏭️ Skipped — it was ${card.target}.`)
-                }
-                className="btn secondary flex-1"
-              >
-                Skip card ⏭️
+          !showCard ? (
+            <div className="text-center py-4">
+              <div style={{ fontSize: '44px' }}>🙈</div>
+              <p className="font-bold mb-1">Card covered</p>
+              <p className="muted text-xs mb-4">
+                Guessers, look away! Only the clue-giver may peek — nobody else should
+                see the word or its taboo words.
+              </p>
+              <button onClick={() => { Sound.click(); setShowCard(true); }} className="btn">
+                👀 Clue-giver: peek at the card
               </button>
             </div>
-          </div>
+          ) : (
+            <div>
+              <p className="mb-2">
+                🙈 <b>Clue-giver only:</b> the word is{' '}
+                <span className="text-xl font-black text-[#17457e]">
+                  {card.target}
+                </span>
+              </p>
+              <p className="text-sm mb-3">
+                🚫 Never say: <b>{card.taboo.join(', ')}</b> (or the word itself!)
+              </p>
+              <p className="muted text-xs mb-4">
+                Describe it out loud. When the others get it, tap Correct.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    handleNext(true, `✔️ Correct — it was ${card.target}!`)
+                  }
+                  className="btn flex-1"
+                >
+                  ✔️ They guessed it
+                </button>
+                <button
+                  onClick={() =>
+                    handleNext(false, `⏭️ Skipped — it was ${card.target}.`)
+                  }
+                  className="btn secondary flex-1"
+                >
+                  Skip card ⏭️
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           <div>
             <p className="text-xs font-bold text-[#17457e]">
@@ -141,8 +159,8 @@ export const TabooGame: React.FC<TabooGameProps> = ({ mode, names, onFinish }) =
             </p>
             <p className="text-base font-medium my-2 italic">“{card.clue}”</p>
             <p className="muted text-xs mb-3">
-              It never used the target or any taboo word ({card.taboo.join(', ')}).
-              What is the word?
+              The computer described it without using the word itself or any of its 5
+              secret taboo words — those stay hidden from the guesser. What is the word?
             </p>
 
             <div className="flex gap-2 items-center mb-3">
