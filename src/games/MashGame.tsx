@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { FORTUNE_CATEGORIES, FortuneCategory } from '../data/fortunes';
+import {
+  FORTUNE_CATEGORIES,
+  FortuneCategory,
+  ZODIAC,
+  ZodiacInfo,
+  zodiacFor,
+  SIGN_LINES,
+  ASTRO_LINES,
+  MOON_LINES
+} from '../data/fortunes';
 import { Logic } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -16,13 +25,29 @@ type Stage = 'pick' | 'blanks' | 'reveal';
 const fill = (s: string, v: Record<string, string>) =>
   s.split('{a}').join(v.a).split('{b}').join(v.b).split('{c}').join(v.c);
 
+const fillAstro = (s: string, z: ZodiacInfo) =>
+  s
+    .split('{sign}')
+    .join(z.emoji + ' ' + z.sign)
+    .split('{planet}')
+    .join(z.planet)
+    .split('{element}')
+    .join(z.element)
+    .split('{trait}')
+    .join(z.trait);
+
 export const MashGame: React.FC<MashGameProps> = ({ names, onFinish }) => {
   const [stage, setStage] = useState<Stage>('pick');
   const [cat, setCat] = useState<FortuneCategory | null>(null);
   const [values, setValues] = useState<Record<string, string>>({ a: '', b: '', c: '' });
-  const [fortune, setFortune] = useState<{ lines: string[]; spirit: number; lucky: number } | null>(
-    null
-  );
+  const [birthday, setBirthday] = useState<string>('');
+  const [fortune, setFortune] = useState<{
+    lines: string[];
+    spirit: number;
+    lucky: number;
+    sign: ZodiacInfo;
+    born: boolean;
+  } | null>(null);
   const [shown, setShown] = useState(0);
 
   const seeker = names && names[0] ? names[0] : 'Seeker';
@@ -43,24 +68,43 @@ export const MashGame: React.FC<MashGameProps> = ({ names, onFinish }) => {
       const raw = (values[b.key] || '').trim();
       v[b.key] = raw || b.def; // the spirits fill any silence
     });
-    const charSum = (v.a + v.b + v.c + cat.id)
+    const charSum = (v.a + v.b + v.c + cat.id + birthday)
       .split('')
       .reduce((s, ch) => s + ch.charCodeAt(0), 0);
     const spirit = 3 + (charSum % 8); // the ancient count runs 3..10
     const lucky = ((charSum * 7) % 90) + 1;
+    // astrology: the birthday blank sets the seeker's stars
+    let sign: ZodiacInfo | null = null;
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday || '');
+    if (dm) {
+      const mo = parseInt(dm[2], 10);
+      const dy = parseInt(dm[3], 10);
+      if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31) sign = zodiacFor(mo, dy);
+    }
+    const born = !!sign;
+    if (!sign) sign = ZODIAC[charSum % 12]; // no birthday: the spirits cast the chart
     const banks: Record<string, string[]> = {
       Opener: cat.openers,
+      Moon: MOON_LINES,
       Main: cat.mains,
+      Astro: [...(SIGN_LINES[sign.sign] || []), ...ASTRO_LINES],
+      Second: cat.seconds || [],
       Twist: cat.twists,
       Closing: cat.closings
     };
     if (cat.special) banks.Special = cat.special.options;
     const picks = Logic.mashEliminate(banks, spirit);
-    const lines: string[] = [fill(picks.Opener, v), fill(picks.Main, v)];
+    const lines: string[] = [
+      fill(picks.Opener, v),
+      fill(picks.Moon, v),
+      fill(picks.Main, v),
+      fillAstro(picks.Astro, sign),
+      fill(picks.Second, v)
+    ];
     if (cat.special) lines.push(cat.special.line.split('{x}').join(picks.Special));
     lines.push(fill(picks.Twist, v), fill(picks.Closing, v));
     Sound.win();
-    setFortune({ lines, spirit, lucky });
+    setFortune({ lines, spirit, lucky, sign, born });
     setShown(0);
     setStage('reveal');
   };
@@ -90,8 +134,9 @@ export const MashGame: React.FC<MashGameProps> = ({ names, onFinish }) => {
             </p>
           ))}
           <p className="text-xs muted mt-2">
-            ✨ Spirit number {fortune.spirit} · Lucky number {fortune.lucky} · The notebook has
-            spoken! 📓
+            {fortune.sign.emoji} {fortune.born ? 'Born under' : 'The spirits cast your chart:'}{' '}
+            {fortune.sign.sign}, ruled by {fortune.sign.planet} · ✨ Spirit number{' '}
+            {fortune.spirit} · Lucky number {fortune.lucky} · The notebook has spoken! 📓
           </p>
         </div>
       )
@@ -166,6 +211,18 @@ export const MashGame: React.FC<MashGameProps> = ({ names, onFinish }) => {
             </p>
           </div>
 
+          <div className="mb-2">
+            <label className="text-xs font-bold text-[#17457e] block">
+              🎂 Your birthday — the spirits read your stars
+            </label>
+            <input
+              type="date"
+              value={birthday}
+              onChange={e => setBirthday(e.target.value)}
+              className="w-full bg-white/70 border border-[#9db9dc] rounded-xl px-3 py-2 text-sm"
+            />
+          </div>
+
           {cat.blanks.map(b => (
             <div key={b.key} className="mb-2">
               <label className="text-xs font-bold text-[#17457e] block">{b.label}</label>
@@ -214,7 +271,12 @@ export const MashGame: React.FC<MashGameProps> = ({ names, onFinish }) => {
           <p style={{ color: '#c9b3f5', letterSpacing: '3px', fontSize: '11px' }}>
             {cat.icon} THE {cat.name.toUpperCase()} FORTUNE OF {seeker.toUpperCase()} {cat.icon}
           </p>
-          <div className="my-4" style={{ minHeight: '150px' }}>
+          <p style={{ color: '#e9dcff', fontSize: '12px', marginTop: '4px' }}>
+            {fortune.sign.emoji}{' '}
+            {fortune.born ? 'Born under' : 'The spirits cast your chart:'} {fortune.sign.sign} ·
+            ruled by {fortune.sign.planet} · {fortune.sign.element} spirit
+          </p>
+          <div className="my-4" style={{ minHeight: '230px' }}>
             {shown === 0 && (
               <p className="animate-pulse" style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>
                 The mists are parting… ✨ 🌙 ✨

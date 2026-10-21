@@ -80,7 +80,7 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     p: [1, 4],
     payout: PAYOUTS.mash,
     rules:
-      'The classic fortune teller, mystical edition. First pick what you want a fortune about: Love, Work, Money, Kids, Home, Travel or Luck. Then fill in the three blanks the spirits ask for (a name, a color, a number — your own truths). The spirits run the ancient MASH count — counting around and crossing off fortunes until the chosen ones remain — and weave your fortune from your own words. In Home, the great count also settles the oldest question of all: Mansion, Apartment, Shack or House.'
+      'The classic fortune teller, mystical edition. First pick what you want a fortune about: Love, Work, Money, Kids, Home, Travel or Luck. Then give the spirits your birthday — they will read your zodiac sign, your ruling planet and your element — and fill in the three blanks they ask for (a name, a color, a number). The spirits run the ancient MASH count through over 500 fortune lines, crossing off readings until yours remains, woven from your own words and your own stars. In Home, the great count also settles the oldest question of all: Mansion, Apartment, Shack or House.'
   },
   taboo: {
     id: 'taboo',
