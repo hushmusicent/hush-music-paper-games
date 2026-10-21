@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hush Music Paper Games</title>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#101a2e; --card:#16233c; --card2:#1e2f4f;
+  --ink:#58a6ff; --ink2:#9ccaff; --green:#2ecc71; --red:#e74c3c;
+  --cream:#fdf6e3; --text:#eef4ff; --muted:#8fa3c4; --line:#2a3d63;
+  --paper:#fffdf4; --paperline:#bcd6f7; --margin:#f2a0a0; --pencil:#22304a;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh;}
+header{position:sticky; top:0; z-index:50; background:linear-gradient(180deg,#14243f,#0d1728); border-bottom:2px solid var(--ink); padding:8px 12px; display:flex; align-items:center; gap:8px;}
+header .logo{font-size:18px; font-weight:800; color:var(--ink2); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.pill{background:var(--card2); border:1px solid var(--line); border-radius:20px; padding:6px 12px; font-weight:700; font-size:14px; white-space:nowrap;}
+.pill.gold{color:var(--cream); border-color:var(--ink);}
+.iconbtn{background:var(--card2); border:1px solid var(--line); color:var(--text); border-radius:12px; font-size:18px; padding:6px 10px; cursor:pointer;}
+.iconbtn.off{opacity:.45;}
+main{padding:12px 12px 90px; max-width:640px; margin:0 auto;}
+nav.bottom{position:fixed; bottom:0; left:0; right:0; background:#0d1728; border-top:1px solid var(--line); display:flex; z-index:50;}
+nav.bottom button{flex:1; background:none; border:none; color:var(--muted); font-size:11px; padding:10px 4px 12px; cursor:pointer;}
+nav.bottom button .e{font-size:22px; display:block;}
+nav.bottom button.active{color:var(--ink);}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:12px;}
+.btn{display:block; width:100%; background:linear-gradient(180deg,var(--ink),#2f6fd0); color:#06182e; border:none; border-radius:14px; padding:14px; font-size:16px; font-weight:800; cursor:pointer; margin:8px 0;}
+.btn:disabled{opacity:.4;}
+.btn.secondary{background:var(--card2); color:var(--text); border:1px solid var(--line);}
+.btn.small{padding:8px 10px; font-size:14px; width:auto; display:inline-block; margin:4px;}
+.btn.danger{background:var(--red); color:#fff;}
+input,select,textarea{width:100%; background:var(--bg2); border:1px solid var(--line); color:var(--text); border-radius:12px; padding:12px; font-size:16px; margin:6px 0;}
+label{font-size:13px; color:var(--muted);}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.gamecard{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 8px; text-align:center; cursor:pointer;}
+.gamecard .e{font-size:40px;}
+.gamecard .n{font-weight:700; margin-top:6px; font-size:14px;}
+.gamecard .t{font-size:11px; color:var(--muted);}
+h2{color:var(--ink2); margin:8px 0 12px;}
+h3{margin:10px 0 6px;}
+.msg{background:var(--bg2); border-left:3px solid var(--ink); padding:8px 10px; border-radius:0 10px 10px 0; margin:6px 0; font-size:14px;}
+.msg .who{color:var(--ink2); font-weight:700; font-size:12px;}
+.err{color:var(--red); font-size:14px; margin:6px 0;}
+.ok{color:var(--green); font-size:14px; margin:6px 0;}
+.row{display:flex; gap:8px; align-items:center;}
+.row .grow{flex:1; min-width:0;}
+.row .btn{width:auto; flex:0 0 auto;}
+.row .btn.grow{flex:1;}
+table.lb{width:100%; border-collapse:collapse; font-size:14px;}
+table.lb td,table.lb th{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left;}
+table.lb tr.me td{color:var(--cream); font-weight:800;}
+.chatbox{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:8px; max-height:180px; overflow-y:auto; margin:8px 0;}
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px;}
+.modal .card{max-width:420px; width:100%; max-height:85vh; overflow-y:auto;}
+.hidden{display:none !important;}
+.center{text-align:center;} .muted{color:var(--muted); font-size:13px;}
+.big{font-size:26px; font-weight:800;}
+.status{font-size:15px; margin:8px 0; min-height:22px; font-weight:600;}
+.turn-banner{background:rgba(88,166,255,.15); border:1px solid var(--ink); color:var(--ink2); border-radius:10px; padding:8px; text-align:center; font-weight:700; margin:8px 0;}
+.voicebar{background:#14291c; border:1px solid var(--green); border-radius:12px; padding:8px; margin:8px 0; font-size:14px;}
+.codechip{display:inline-block; background:var(--bg2); border:1px dashed var(--ink); color:var(--ink2); border-radius:10px; padding:6px 14px; font-size:20px; font-weight:800; letter-spacing:3px;}
+/* ===== notebook paper panel ===== */
+.paper{background:var(--paper); color:var(--pencil); border-radius:10px; padding:14px 12px 14px 34px; margin:10px 0; position:relative;
+ background-image:repeating-linear-gradient(180deg, transparent 0 27px, var(--paperline) 27px 28px); line-height:1.55;
+ box-shadow:0 4px 14px rgba(0,0,0,.45);}
+.paper:before{content:''; position:absolute; top:0; bottom:0; left:24px; width:2px; background:var(--margin);}
+.paper h3,.paper h4{color:#17457e; margin:6px 0;}
+.paper input,.paper select,.paper textarea{background:rgba(255,255,255,.65); border:1px solid #9db9dc; color:var(--pencil);}
+.paper .muted{color:#5a6f8f;}
+.paper table{color:var(--pencil);}
+.kbtn{display:inline-block; min-width:38px; padding:9px 6px; margin:3px; background:#eef4ff; border:1px solid #9db9dc; border-bottom-width:3px; border-radius:8px; color:#17457e; font-weight:800; font-size:16px; cursor:pointer; text-align:center;}
+.kbtn:disabled{opacity:.3; cursor:default;}
+.kbtn.bad{background:#f8d7d3; border-color:#d98a80;}
+.kbtn.good{background:#d3f0dc; border-color:#7fc793;}
+.edgebtn{background:#cfd9e8; border:none; border-radius:6px; cursor:pointer; padding:0;}
+.edgebtn:hover{background:var(--ink);}
+.edgebtn.t0{background:#58a6ff;} .edgebtn.t1{background:#e0654f;}
+.dotcell{display:flex; align-items:center; justify-content:center;}
+.dotcell i{width:11px; height:11px; border-radius:50%; background:#22304a; display:block;}
+.boxcell{display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px; border-radius:4px;}
+.wsgrid{display:grid; grid-template-columns:repeat(10,1fr); gap:2px; max-width:360px; margin:8px auto;}
+.wscell{background:#eef4ff; border:1px solid #b9cfea; border-radius:5px; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:#17457e; cursor:pointer; user-select:none;}
+.wscell.sel{background:#ffe9a8; border-color:#d9a726;}
+.wscell.found{background:#bfe8c9; color:#14532a; text-decoration:none;}
+.cwgrid{display:grid; gap:2px; max-width:330px; margin:8px auto;}
+.cwcell{aspect-ratio:1; position:relative;}
+.cwcell input{width:100%; height:100%; text-align:center; font-size:19px; font-weight:800; text-transform:uppercase; padding:0; margin:0; background:#fff; border:1px solid #8aa6c9; border-radius:4px; color:#17457e;}
+.cwcell .num{position:absolute; top:1px; left:3px; font-size:9px; color:#888; z-index:2; font-weight:700;}
+.cwcell.block{background:#22304a; border-radius:4px;}
+.cwcell input.okc{background:#d3f0dc;} .cwcell input.badc{background:#f8d7d3;}
+canvas.draw{background:#fff; border:2px solid #9db9dc; border-radius:10px; width:100%; touch-action:none;}
+canvas.paperCanvas{background:transparent; width:100%; touch-action:none;}
+.tttcell{aspect-ratio:1; background:#fff; border:2px solid #9db9dc; border-radius:8px; font-size:38px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#17457e;}
+.tttcell.o{color:#c0392b;}
+.chip{display:inline-block; background:#eef4ff; border:1px solid #9db9dc; color:#17457e; border-radius:14px; padding:3px 10px; margin:2px; font-size:13px; font-weight:700;}
+.chip.done{text-decoration:line-through; opacity:.55;}
+.frag{font-size:34px; font-weight:900; letter-spacing:6px; text-align:center; color:#17457e; text-transform:uppercase;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✏️ Hush Music Paper Games</div>
+  <div class="pill gold" id="pointsPill">⭐ 0</div>
+  <button class="iconbtn" id="soundBtn" title="Mute game sounds">🔊</button>
+  <button class="iconbtn" id="micBtn" title="Mute mic" style="display:none">🎤</button>
+</header>
+<main id="view"></main>
+<nav class="bottom" id="bottomNav">
+  <button data-v="home" class="active"><span class="e">🏠</span>Games</button>
+  <button data-v="chat"><span class="e">💬</span>Chat</button>
+  <button data-v="leaderboard"><span class="e">🏆</span>Top 50</button>
+  <button data-v="friends"><span class="e">👥</span>Friends</button>
+  <button data-v="profile"><span class="e">👤</span>Profile</button>
+</nav>
+<div id="modalRoot"></div>
+<script>
+'use strict';
+/* ================= Hush Music Paper Games =================
+   Sibling hub of Hush Music Hand / Board / Show Games.
+   Demo mode works fully offline on this device. Paste Firebase keys +
+   a LiveKit token-worker URL in Profile > Setup to unlock real online
+   PvP, friends, shared Top 50 and voice talk (pg_* RTDB namespace).
+   NO secrets are baked into this file — keys live in localStorage only. */
+const START_POINTS=1000, DAILY_BONUS=500;
+const PAYOUTS={dots:60,ttt:40,hangman:50,sprouts:70,sim:60,bulls:60,categories:60,mash:30,taboo:60,crossword:70,wordsearch:60,ghost:60,ladder:60,consequences:30,telephone:40};
+
+/* ================= utils ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd=n=>Math.floor(Math.random()*n);
+const ri=(a,b)=>a+rnd(b-a+1);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const uid=()=>'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const pickA=a=>a[rnd(a.length)];
+function toast(t){const v=$('#view');if(!v)return;const d=document.createElement('div');d.className='msg';d.innerHTML=esc(t);v.prepend(d);setTimeout(()=>d.remove(),3500);}
+function loadScript(src){return new Promise((res,rej)=>{if(document.querySelector('script[src="'+src+'"]'))return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+function modal(html){const r=$('#modalRoot');r.innerHTML='<div class="modal"><div class="card">'+html+'</div></div>';return r.firstChild;}
+function closeModal(){const r=$('#modalRoot');if(r)r.innerHTML='';}
+function clearTimers(){(window._timers||[]).forEach(t=>{clearInterval(t);clearTimeout(t);});window._timers=[];}
+function every(ms,fn){const t=setInterval(fn,ms);(window._timers=window._timers||[]).push(t);return t;}
+function later(ms,fn){const t=setTimeout(fn,ms);(window._timers=window._timers||[]).push(t);return t;}
+
+/* ================= local store (pg_ prefix) ================= */
+const store={
+ get(k,d){try{const v=localStorage.getItem('pg_'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
+ set(k,v){try{localStorage.setItem('pg_'+k,JSON.stringify(v));}catch(e){}},
+ del(k){try{localStorage.removeItem('pg_'+k);}catch(e){}}
+};
+
+/* ================= sound ================= */
+const Sound={ctx:null,muted:store.get('muted',false),
+ ensure(){if(!this.ctx){try{this.ctx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();},
+ beep(f,d,type){if(this.muted)return;this.ensure();if(!this.ctx)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.1,this.ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+d);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(this.ctx.currentTime+d);},
+ click(){this.beep(620,.06,'square');},win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.beep(f,.15),i*110));},lose(){[400,300,220].forEach((f,i)=>setTimeout(()=>this.beep(f,.18,'sawtooth'),i*130));},
+ toggle(){this.muted=!this.muted;store.set('muted',this.muted);const b=$('#soundBtn');if(b){b.textContent=this.muted?'🔇':'🔊';b.classList.toggle('off',this.muted);}}};
+
+/* ================= Firebase backend (optional) ================= */
+const CONFIG={firebase:{apiKey:"",authDomain:"",databaseURL:"",projectId:"",appId:""}};
+try{const saved=store.get('fb_config',null);if(saved)CONFIG.firebase=saved;}catch(e){}
+const Backend={mode:'demo',fb:null,auth:null,db:null,
+ configured(){const f=CONFIG.firebase;return !!(f&&f.apiKey&&f.databaseURL&&f.projectId);},
+ async init(){if(!this.configured())return false;try{
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+  this.fb=firebase.initializeApp(CONFIG.firebase);this.auth=firebase.auth();this.db=firebase.database();this.mode='firebase';return true;
+ }catch(e){console.warn(e);return false;}}
+};
+
+/* ================= auth / account (demo-first) ================= */
+function newCode(){const cs='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=cs[rnd(cs.length)];return c;}
+const Auth={user:null, // {uid, username, code}
+ accounts(){return store.get('accounts',{});},
+ saveAccounts(a){store.set('accounts',a);},
+ init(){
+  const sess=store.get('session',null);
+  if(Backend.mode==='firebase'){
+   Backend.auth.onAuthStateChanged(async u=>{
+    if(u){let name=u.displayName||'Player',code='';
+     try{const s=await Backend.db.ref('pg_users/'+u.uid).get();const d=s.val()||{};name=d.username||name;code=d.code||'';
+      if(!code){code=newCode();await Backend.db.ref('pg_users/'+u.uid).update({username:name,code});await Backend.db.ref('pg_codes/'+code).set(u.uid);}
+     }catch(e){}
+     this.user={uid:u.uid,username:name,code};Points.pull();UI.refresh();UI.render();
+    } else {this.user=null;UI.render();}
+   });
+   return;
+  }
+  if(sess){const a=this.accounts()[sess];if(a){this.user={uid:sess,username:a.username,code:a.code};Points.pullLocal();return;}}
+  this.user=null;
+ },
+ demoSignup(username,pw){const a=this.accounts();const id='local_'+username.toLowerCase();
+  if(a[id])return 'That username is taken on this device.';
+  const code=newCode();a[id]={username,pw,code,points:START_POINTS,wins:0,lastDaily:0,stats:{},friends:[],requests:[],sent:[]};
+  this.saveAccounts(a);store.set('session',id);this.user={uid:id,username,code};Points.pullLocal();return null;},
+ demoLogin(username,pw){const a=this.accounts();const id='local_'+username.toLowerCase();
+  if(!a[id])return 'No account with that username on this device.';
+  if(a[id].pw!==pw)return 'Wrong password.';
+  store.set('session',id);this.user={uid:id,username:a[id].username,code:a[id].code};Points.pullLocal();return null;},
+ async signup(username,email,pw){if(Backend.mode!=='firebase')return this.demoSignup(username,pw);
+  try{const cred=await Backend.auth.createUserWithEmailAndPassword(email,pw);await cred.user.updateProfile({displayName:username});
+   const code=newCode();await Backend.db.ref('pg_users/'+cred.user.uid).set({username,email,code,points:START_POINTS,wins:{},created:Date.now(),lastDaily:0});
+   await Backend.db.ref('pg_codes/'+code).set(cred.user.uid);this.user={uid:cred.user.uid,username,code};Points.balance=START_POINTS;return null;
+  }catch(e){return e.message||'Sign up failed.';}},
+ async login(email,pw){if(Backend.mode!=='firebase'){
+   // demo accounts are keyed by username; the login form passes username in the email slot in demo mode
+   return this.demoLogin(email,pw);}
+  try{await Backend.auth.signInWithEmailAndPassword(email,pw);return null;}catch(e){return e.message||'Log in failed.';}},
+ async logout(){clearTimers();inGame=false;Voice.leave();if(Backend.mode==='firebase'){try{await Backend.auth.signOut();}catch(e){}}store.del('session');this.user=null;UI.go('home');},
+ erase(){if(!this.user)return;
+  if(Backend.mode==='firebase'){const u=this.user;Backend.db.ref('pg_users/'+u.uid).remove().catch(()=>{});Backend.db.ref('pg_codes/'+u.code).remove().catch(()=>{});Backend.auth.currentUser&&Backend.auth.currentUser.delete().catch(()=>{});}
+  else{const a=this.accounts();delete a[this.user.uid];this.saveAccounts(a);}
+  store.del('session');this.user=null;Points.balance=START_POINTS;Points.wins={};UI.go('home');toast('Account erased.');}
+};
+
+/* ================= points + per-game stats ================= */
+const Points={balance:START_POINTS,wins:{},lastDaily:0,
+ pullLocal(){if(!Auth.user)return;const a=Auth.accounts()[Auth.user.uid]||{};this.balance=a.points!=null?a.points:START_POINTS;this.wins=a.winsObj||{};this.lastDaily=a.lastDaily||0;this.saveLocalObj(a);},
+ saveLocalObj(a){/* keeps legacy numeric wins readable */},
+ async pull(){if(Backend.mode!=='firebase')return this.pullLocal();
+  try{const s=await Backend.db.ref('pg_users/'+Auth.user.uid).get();const d=s.val()||{};this.balance=d.points!=null?d.points:START_POINTS;this.wins=d.wins||{};this.lastDaily=d.lastDaily||0;}catch(e){}UI.refresh();},
+ save(){if(!Auth.user)return;
+  if(Backend.mode==='firebase'){Backend.db.ref('pg_users/'+Auth.user.uid).update({points:this.balance,wins:this.wins,lastDaily:this.lastDaily}).catch(()=>{});}
+  else{const all=Auth.accounts();const a=all[Auth.user.uid];if(a){a.points=this.balance;a.winsObj=this.wins;a.lastDaily=this.lastDaily;Auth.saveAccounts(all);}}
+  UI.refresh();},
+ add(n){this.balance+=n;this.save();},
+ totalWins(){return Object.values(this.wins).reduce((s,g)=>s+(g.w||0),0);},
+ record(gameId,result){ // result: 'w' | 'l' | 't'
+  if(!this.wins[gameId])this.wins[gameId]={w:0,l:0,t:0};
+  this.wins[gameId][result]++;this.save();},
+ canClaimDaily(){return this.lastDaily!==Math.floor(Date.now()/864e5);},
+ claimDaily(){if(!this.canClaimDaily())return false;this.lastDaily=Math.floor(Date.now()/864e5);this.add(DAILY_BONUS);this.save();toast('Daily bonus +'+DAILY_BONUS+' ⭐');return true;}
+};
+
+/* ================= bot names (leaderboard flavour, same style as other hubs) ================= */
+const BOT_NAMES=['AceInk','PencilPat','DoodleDee','SketchySam','PaperQueen','InkBlot','MarginMike','LooseLeafLou','GraphiteGus','NotebookNia','RulerRae','EraserEd','SharpPencil','DottedDot','BlueLineBelle','PageTurner','StapleSteve','BinderBree','QuizInk','FoldyFred','CrayonKai','MarkerMona','TapeTess','GlueGunGio','IndexCardIvy','SpiralSal','MarginNotes','PenPalPam','InkSlinger','DoodleBug','PaperChase','LeadHead','SketchPadSue','RuledRudy','CarbonCopy','BlotTest','PageOne','QuillQueen','NibNibs','FountainFen','BallpointBo','HighlighterHal','StickyNoteNed','TornPageTara','CreaseChris','DottedLineDan','MarginCall','InkAndPaper','LooseLeafLiz'];
+function botCode(i){return 'BOT'+String(1000+i*37).slice(0,4);}
+function seededLeaderboard(){
+ const rows=BOT_NAMES.map((n,i)=>({username:n,points:900+((i*613)%4200),wins:20+((i*29)%180)}));
+ if(Auth.user)rows.push({username:Auth.user.username,points:Points.balance,wins:Points.totalWins(),me:true});
+ rows.sort((a,b)=>b.points-a.points);return rows.slice(0,50);
+}
+
+/* ================= friends (demo local + Firebase pg_ paths) ================= */
+const Friends={
+ local(){const all=Auth.accounts();return all[Auth.user.uid]||null;},
+ directory(){ // demo directory: the seeded bots can be found by their code
+  return BOT_NAMES.map((n,i)=>({username:n,code:botCode(i),bot:true}));},
+ list(){if(Backend.mode==='firebase')return null;const a=this.local();return a?(a.friends||[]):[];},
+ requests(){const a=this.local();return a?(a.requests||[]):[];},
+ seedRequests(){const a=this.local();if(!a)return;if(a._seededReq)return;a._seededReq=true;
+  a.requests=[{username:'DoodleDee',code:botCode(2)},{username:'PaperQueen',code:botCode(4)}];
+  const all=Auth.accounts();all[Auth.user.uid]=a;Auth.saveAccounts(all);},
+ async addByCode(code){code=String(code||'').trim().toUpperCase();if(!code)return 'Enter a player code.';
+  if(Auth.user&&code===Auth.user.code)return 'That is your own code.';
+  if(Backend.mode==='firebase'){
+   try{const s=await Backend.db.ref('pg_codes/'+code).get();if(!s.exists())return 'No player with that code.';
+    const toUid=s.val();if(toUid===Auth.user.uid)return 'That is your own code.';
+    const p=await Backend.db.ref('pg_users/'+toUid).get();const d=p.val()||{};
+    await Backend.db.ref('pg_requests/'+toUid+'/'+Auth.user.uid).set({from:Auth.user.username,code:Auth.user.code,at:Date.now()});
+    return 'Friend request sent to '+(d.username||'player')+'.';
+   }catch(e){return 'Could not send request.';}}
+  const a=this.local();if(!a)return 'Log in first.';
+  const dir=this.directory().find(d=>d.code===code);
+  const all=Auth.accounts();const other=Object.values(all).find(x=>x.code===code);
+  const target=dir||(other?{username:other.username,code}:null);
+  if(!target)return 'No player with that code on this device (demo directory has the Top-50 bots — try a bot code from the leaderboard, or connect Firebase).';
+  a.friends=a.friends||[];a.requests=a.requests||[];a.sent=a.sent||[];
+  if(a.friends.some(f=>f.code===code))return target.username+' is already your friend.';
+  if(other){ // real local account: drop a request in their inbox
+   const oid=Object.keys(all).find(k=>all[k].code===code);all[oid].requests=all[oid].requests||[];
+   if(!all[oid].requests.some(r=>r.code===Auth.user.code))all[oid].requests.push({username:Auth.user.username,code:Auth.user.code});
+   a.sent.push({username:target.username,code});Auth.saveAccounts(all);return 'Friend request sent to '+target.username+'. They will see it when they log in on this device.';
+  }
+  // bot directory: bots accept after a friendly beat (demo flavour)
+  a.sent.push({username:target.username,code});Auth.saveAccounts(all);
+  later(600,()=>{const aa=this.local();if(!aa)return;aa.sent=(aa.sent||[]).filter(s=>s.code!==code);aa.friends=aa.friends||[];if(!aa.friends.some(f=>f.code===code))aa.friends.push({username:target.username,code});const al=Auth.accounts();al[Auth.user.uid]=aa;Auth.saveAccounts(al);toast(target.username+' accepted your friend request! 🎉');if(UI.view==='friends')UI.render();});
+  return 'Friend request sent to '+target.username+'.';},
+ accept(req){const a=this.local();if(!a)return;a.requests=(a.requests||[]).filter(r=>r.code!==req.code);a.friends=a.friends||[];if(!a.friends.some(f=>f.code===req.code))a.friends.push({username:req.username,code:req.code});
+  const all=Auth.accounts();const oid=Object.keys(all).find(k=>all[k].code===req.code);if(oid){all[oid].friends=all[oid].friends||[];if(!all[oid].friends.some(f=>f.code===Auth.user.code))all[oid].friends.push({username:Auth.user.username,code:Auth.user.code});}
+  all[Auth.user.uid]=a;Auth.saveAccounts(all);},
+ decline(req){const a=this.local();if(!a)return;a.requests=(a.requests||[]).filter(r=>r.code!==req.code);const all=Auth.accounts();all[Auth.user.uid]=a;Auth.saveAccounts(all);},
+ async fbList(box){ // firebase friends UI fill
+  try{const s=await Backend.db.ref('pg_friends/'+Auth.user.uid).get();const ids=Object.keys(s.val()||{});
+   const rows=[];for(const fid of ids){const p=await Backend.db.ref('pg_users/'+fid).get();const d=p.val()||{};rows.push({username:d.username||'?',code:d.code||''});}
+   const r=await Backend.db.ref('pg_requests/'+Auth.user.uid).get();const reqs=Object.entries(r.val()||{}).map(([k,v])=>({uid:k,username:v.from,code:v.code}));
+   UI._fbFriends={rows,reqs};if(box)UI.renderFbFriends(box);
+  }catch(e){}}
+};
+
+/* ================= online rooms (pg_rooms) ================= */
+const Net={room:null,_off:[],_onUpdate:null,
+ needNet(){if(Backend.mode!=='firebase'){toast('Online PvP needs Firebase: Profile → Setup, paste keys. Demo rooms below still work on this device.');return false;}return true;},
+ async create(game,seats){if(!this.needNet())return null;const code=String(ri(1000,9999));
+  const room={code,game,seatsNeeded:seats,seats:[Auth.user.uid],names:{[Auth.user.uid]:Auth.user.username},state:null,turn:0,status:'waiting',host:Auth.user.uid,created:Date.now()};
+  await Backend.db.ref('pg_rooms/'+code).set(room);this.room=room;this._listen(code);return code;},
+ async join(code){if(!this.needNet())return null;code=String(code).trim();
+  const s=await Backend.db.ref('pg_rooms/'+code).get();if(!s.exists()){toast('Room not found');return null;}
+  const room=s.val();if(room.status!=='waiting'){toast('Game already started');return null;}
+  if(!room.seats.includes(Auth.user.uid)){if(room.seats.length>=room.seatsNeeded){toast('Room is full');return null;}
+   room.seats.push(Auth.user.uid);room.names[Auth.user.uid]=Auth.user.username;
+   await Backend.db.ref('pg_rooms/'+code+'/seats').set(room.seats);await Backend.db.ref('pg_rooms/'+code+'/names').set(room.names);}
+  this.room=room;this._listen(code);return code;},
+ mySeat(){return this.room?this.room.seats.indexOf(Auth.user.uid):-1;},
+ isHost(){return this.room&&this.room.host===Auth.user.uid;},
+ seatName(i){if(!this.room)return '?';const u=this.room.seats[i];return (this.room.names&&this.room.names[u])||'Player '+(i+1);},
+ _listen(code){this.leave(true);const ref=Backend.db.ref('pg_rooms/'+code);
+  const h=snap=>{const r=snap.val();if(!r)return;this.room=r;if(this._onUpdate)this._onUpdate(r);};
+  ref.on('value',h);this._off.push(()=>ref.off('value',h));},
+ onUpdate(cb){this._onUpdate=cb;},
+ async push(patch){if(!this.room)return;Object.assign(this.room,patch);await Backend.db.ref('pg_rooms/'+this.room.code).update(patch);},
+ async leave(silent){this._off.forEach(f=>{try{f()}catch(e){}});this._off=[];
+  if(!silent&&this.room&&Backend.mode==='firebase'){try{if(this.isHost())await Backend.db.ref('pg_rooms/'+this.room.code).remove();}catch(e){}}
+  this.room=null;this._onUpdate=null;}
+};
+/* demo rooms (same device, stored locally) */
+const DemoRooms={
+ all(){return store.get('rooms',[]);},
+ save(r){store.set('rooms',r);},
+ create(game){const code=String(ri(1000,9999));const rooms=this.all();rooms.push({code,game,host:Auth.user?Auth.user.username:'Guest',status:'waiting',created:Date.now()});this.save(rooms);return code;},
+ join(code){const rooms=this.all();const r=rooms.find(x=>x.code===String(code).trim());if(!r)return null;r.status='playing';this.save(rooms);return r;},
+ remove(code){this.save(this.all().filter(r=>r.code!==code));},
+ list(game){return this.all().filter(r=>!game||r.game===game);}
+};
+
+/* ================= chat (pg_chats / local) ================= */
+const Chat={
+ localKey(path){return 'chat_'+path;},
+ read(path){return store.get(this.localKey(path),[]);},
+ async send(path,text){text=String(text||'').trim();if(!text||!Auth.user)return;
+  if(Backend.mode==='firebase'){await Backend.db.ref('pg_chats/'+path).push({who:Auth.user.username,uid:Auth.user.uid,text,at:Date.now()});return;}
+  const arr=this.read(path);arr.push({who:Auth.user.username,text,at:Date.now()});store.set(this.localKey(path),arr.slice(-40));},
+ listen(path,onMsg){if(Backend.mode!=='firebase')return ()=>{};
+  const ref=Backend.db.ref('pg_chats/'+path).limitToLast(30);const h=s=>{const m=s.val();if(m)onMsg(m);};ref.on('child_added',h);return ()=>ref.off('child_added',h);}
+};
+function chatBoxHTML(id){return '<div class="chatbox" id="'+id+'Log"></div><div class="row"><input id="'+id+'In" class="grow" placeholder="Message…" maxlength="200"><button class="btn small" id="'+id+'Send">Send</button></div>';}
+function wireChat(id,path){
+ const log=$('#'+id+'Log');if(!log)return;
+ const draw=m=>{const d=document.createElement('div');d.className='msg';d.innerHTML='<span class="who">'+esc(m.who)+'</span> '+esc(m.text);log.appendChild(d);log.scrollTop=log.scrollHeight;};
+ if(Backend.mode==='firebase'){Chat.listen(path,draw);}
+ else{Chat.read(path).forEach(draw);}
+ const send=()=>{const inp=$('#'+id+'In');const t=inp.value.trim();if(!t)return;inp.value='';Chat.send(path,t).then(()=>{if(Backend.mode!=='firebase')draw({who:Auth.user.username,text:t});});};
+ const b=$('#'+id+'Send');if(b)b.onclick=send;const inp=$('#'+id+'In');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+}
+
+/* ================= voice talk (LiveKit via token worker) ================= */
+const Voice={room:null,micOn:true,joined:false,
+ workerUrl(){return store.get('voice_worker','');},
+ configured(){return !!this.workerUrl();},
+ async join(roomName){
+  if(!this.configured()){toast('Voice talk: add your LiveKit token-worker URL in Profile → Setup first.');const vb=$('#voiceStatus');if(vb)vb.textContent='⚠️ No worker URL yet — paste it in Profile → Setup to enable voice talk.';return false;}
+  try{
+   await loadScript('https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js');
+   const res=await fetch(this.workerUrl()+'?room='+encodeURIComponent(roomName)+'&identity='+encodeURIComponent(Auth.user?Auth.user.username:'Guest'));
+   const data=await res.json().catch(async()=>({token:await res.text()}));
+   const token=data.token||data; const lkUrl=data.url||data.wsUrl||store.get('livekit_url','');
+   if(!token||typeof token!=='string')throw new Error('no token');
+   if(!lkUrl)throw new Error('token server did not return a LiveKit URL');
+   const LK=window.LivekitClient;if(!LK)throw new Error('livekit sdk missing');
+   this.room=new LK.Room();await this.room.connect(lkUrl,token);
+   await this.room.localParticipant.setMicrophoneEnabled(true);
+   this.joined=true;this.micOn=true;const mb=$('#micBtn');if(mb)mb.style.display='';
+   const vb=$('#voiceStatus');if(vb)vb.textContent='🎤 Voice connected — you are live.';
+   toast('🎤 Voice connected — talk to your opponent');return true;
+  }catch(e){console.warn(e);toast('Voice failed to connect — check the worker URL in Profile → Setup.');return false;}},
+ async leave(){if(this.room){try{await this.room.disconnect();}catch(e){}this.room=null;}this.joined=false;const mb=$('#micBtn');if(mb)mb.style.display='none';},
+ toggleMic(){if(!this.room)return;this.micOn=!this.micOn;this.room.localParticipant.setMicrophoneEnabled(this.micOn);const mb=$('#micBtn');if(mb){mb.textContent=this.micOn?'🎤':'🔇';mb.classList.toggle('off',!this.micOn);}}
+};
+function voiceBarHTML(roomName){
+ return '<div class="voicebar"><div class="row"><span class="grow" id="voiceStatus">'+(Voice.configured()?'🎤 Voice talk ready.':'🔇 Voice talk needs a token-worker URL — paste it in Profile → Setup.')+'</span>'
+ +'<button class="btn small" id="voiceJoin">🎤 Join Voice Talk</button></div></div>';
+}
+function wireVoice(roomName){const b=$('#voiceJoin');if(b)b.onclick=()=>{Sound.click();Voice.join(roomName);};}
+
+/* ================= pure game logic (also used by node tests) ================= */
+const Logic={
+ /* --- Dots and Boxes (n x n boxes) --- */
+ dotsNew(n){return {n:n,h:Array((n+1)*n).fill(0),v:Array(n*(n+1)).fill(0),boxes:Array(n*n).fill(0),turn:0,over:false,scores:[0,0]};},
+ dotsEdgeIdx(kind,r,c,n){return kind==='h'?r*n+c:r*(n+1)+c;},
+ dotsBoxesForEdge(kind,r,c,n){const out=[];
+  if(kind==='h'){if(r>0)out.push((r-1)*n+c);if(r<n)out.push(r*n+c);}
+  else{if(c>0)out.push(r*n+(c-1));if(c<n)out.push(r*n+c);}return out;},
+ dotsBoxEdges(bi,n){const r=Math.floor(bi/n),c=bi%n;return [['h',r,c],['h',r+1,c],['v',r,c],['v',r,c+1]];},
+ dotsBoxComplete(S,bi){return this.dotsBoxEdges(bi,S.n).every(([k,r,c])=>S[k][this.dotsEdgeIdx(k,r,c,S.n)]!==0);},
+ dotsApply(S,kind,r,c,player){const idx=this.dotsEdgeIdx(kind,r,c,S.n);if(S[kind][idx])return {ok:false,claimed:0,extra:false};
+  S[kind][idx]=player+1;let claimed=0;
+  for(const bi of this.dotsBoxesForEdge(kind,r,c,S.n)){if(!S.boxes[bi]&&this.dotsBoxComplete(S,bi)){S.boxes[bi]=player+1;claimed++;S.scores[player]++;}}
+  const total=S.boxes.filter(Boolean).length;if(total===S.n*S.n)S.over=true;
+  return {ok:true,claimed,extra:claimed>0};},
+ dotsLegal(S){const L=[];for(let r=0;r<=S.n;r++)for(let c=0;c<S.n;c++)if(!S.h[r*S.n+c])L.push(['h',r,c]);
+  for(let r=0;r<S.n;r++)for(let c=0;c<=S.n;c++)if(!S.v[r*(S.n+1)+c])L.push(['v',r,c]);return L;},
+ dotsBotMove(S){const legal=this.dotsLegal(S);if(!legal.length)return null;
+  for(const [k,r,c] of legal){const t=JSON.parse(JSON.stringify(S));const res=this.dotsApply(t,k,r,c,1);if(res.claimed>0)return [k,r,c];}
+  // avoid giving away a box: prefer edges where no adjacent box reaches 3 sides because of us
+  const safe=legal.filter(([k,r,c])=>{const t=JSON.parse(JSON.stringify(S));this.dotsApply(t,k,r,c,1);
+   return !this.dotsBoxesForEdge(k,r,c,S.n).some(bi=>{const filled=this.dotsBoxEdges(bi,S.n).filter(([ek,er,ec])=>t[ek][this.dotsEdgeIdx(ek,er,ec,S.n)]).length;return filled===3&&!t.boxes[bi];});});
+  return pickA(safe.length?safe:legal);},
+ /* --- Tic-Tac-Toe --- */
+ tttWin(b){const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,c,d] of L)if(b[a]&&b[a]===b[c]&&b[a]===b[d])return b[a];return b.every(x=>x)?'draw':null;},
+ tttBest(b,me,opp){let best=-1e9,move=-1;
+  const score=(bd,d)=>{const w=this.tttWin(bd);if(w===me)return 10-d;if(w===opp)return d-10;if(w==='draw')return 0;return null;};
+  const mm=(bd,turn,d)=>{const s=score(bd,d);if(s!==null)return s;let bs=turn===me?-1e9:1e9;
+   for(let i=0;i<9;i++){if(bd[i])continue;bd[i]=turn;const v=mm(bd,turn===me?opp:me,d+1);bd[i]='';bs=turn===me?Math.max(bs,v):Math.min(bs,v);}return bs;};
+  for(let i=0;i<9;i++){if(b[i])continue;b[i]=me;const v=mm(b,opp,0);b[i]='';if(v>best){best=v;move=i;}}return move;},
+ /* --- Hangman --- */
+ hangWrong(word,guessed){return guessed.filter(g=>!word.includes(g)).length;},
+ hangRevealed(word,guessed){return word.split('').every(ch=>guessed.includes(ch));},
+ /* --- Bulls and Cows --- */
+ bullsCows(secret,guess){let bulls=0,cows=0;const s=String(secret),g=String(guess);
+  for(let i=0;i<s.length;i++){if(g[i]===s[i])bulls++;else if(s.includes(g[i]))cows++;}return {bulls,cows};},
+ bullsSecret(){const d=shuffle([0,1,2,3,4,5,6,7,8,9]).slice(0,4);if(d[0]===0){const j=d.findIndex(x=>x!==0);[d[0],d[j]]=[d[j],d[0]];}return d.join('');},
+ bullsValid(g){return /^[0-9]{4}$/.test(g)&&new Set(g).size===4;},
+ /* --- Sim --- */
+ simEdgesKey(a,b){return Math.min(a,b)+'-'+Math.max(a,b);},
+ simHasTriangle(edges){ // edges: array of "a-b" strings all one color
+  const set=new Set(edges);const nodes=new Set();edges.forEach(e=>e.split('-').forEach(x=>nodes.add(+x)));
+  for(const a of nodes)for(const b of nodes)for(const c of nodes){if(a<b&&b<c&&set.has(this.simEdgesKey(a,b))&&set.has(this.simEdgesKey(b,c))&&set.has(this.simEdgesKey(a,c)))return [a,b,c];}return null;},
+ simLoses(edges){return !!this.simHasTriangle(edges);},
+ /* --- Ghost --- */
+ ghostIsWord(frag){return frag.length>=4&&GHOST_SET.has(frag.toLowerCase());},
+ ghostContinuations(frag){frag=frag.toLowerCase();return GHOST_WORDS.filter(w=>w.startsWith(frag)&&w.length>frag.length);},
+ ghostCompleteMove(frag){return this.ghostIsWord(frag);},
+ /* --- Word Ladder --- */
+ ladderOneLetter(a,b){if(a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])d++;return d===1;},
+ ladderValid(word){return LADDER_SET.has(String(word).toLowerCase());},
+ /* --- Word Search --- */
+ wsGenerate(words,size){size=size||10;
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  /* A single pass can paint itself into a corner (~1 in 350 boards); restart
+     the whole board instead of giving up, longest words first. */
+  const ordered=[...words].sort((a,b)=>b.length-a.length);
+  for(let attempt=0;attempt<60;attempt++){
+   const grid=Array.from({length:size},()=>Array(size).fill(''));const placements={};let failed=false;
+   for(const w0 of ordered){const w=w0.toUpperCase();let placed=false,tries=0;
+    while(!placed&&tries<400){tries++;const [dr,dc]=pickA(dirs);const r=ri(0,size-1),c=ri(0,size-1);
+     const er=r+dr*(w.length-1),ec=c+dc*(w.length-1);if(er<0||er>=size||ec<0||ec>=size)continue;
+     let ok=true;for(let i=0;i<w.length;i++){const cell=grid[r+dr*i][c+dc*i];if(cell&&cell!==w[i]){ok=false;break;}}
+     if(!ok)continue;const cells=[];for(let i=0;i<w.length;i++){grid[r+dr*i][c+dc*i]=w[i];cells.push([r+dr*i,c+dc*i]);}
+     placements[w]=cells;placed=true;}
+    if(!placed){failed=true;break;}}
+   if(failed)continue;
+   const AZ='ABCDEFGHIJKLMNOPQRSTUVWXYZ';for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(!grid[r][c])grid[r][c]=AZ[rnd(26)];
+   return {grid:grid.map(row=>row.join('')),placements};}
+  return null;},
+ wsWordAt(grid,cells){return cells.map(([r,c])=>grid[r][c]).join('');},
+ /* --- Crossword --- */
+ cwBuild(puzzle){const size=puzzle.size;const grid=Array.from({length:size},()=>Array(size).fill('#'));const nums={};
+  for(const p of puzzle.entries){for(let i=0;i<p.answer.length;i++){const r=p.r+(p.dir==='D'?i:0),c=p.c+(p.dir==='A'?i:0);
+   if(r<0||r>=size||c<0||c>=size)return null;const cur=grid[r][c];
+   if(cur!=='#'&&cur!==p.answer[i])return null;grid[r][c]=p.answer[i];}}
+  const starts={};for(const p of puzzle.entries){const k=p.r+','+p.c;starts[k]=true;}
+  let n=0;for(let r=0;r<size;r++)for(let c=0;c<size;c++){if(grid[r][c]!=='#'&&starts[r+','+c]){n++;nums[r+','+c]=n;}}
+  for(const p of puzzle.entries){p.num=nums[p.r+','+p.c];if(!p.num)return null;}
+  return {grid:grid.map(row=>row.join('')),nums};},
+ /* --- Categories --- */
+ catValid(cat,ans,letter){ans=String(ans||'').trim().toUpperCase();letter=String(letter).toUpperCase();
+  if(!ans||ans[0]!==letter||!/^[A-Z][A-Z '\-]*$/.test(ans))return false;
+  const list=(CAT_LISTS[cat]||[]);const forLetter=list.filter(w=>w[0]===letter);
+  if(forLetter.length)return list.includes(ans);return ans.length>=2;},
+ catScore(mine,bot,letter){let total=0;const detail={};
+  for(const cat of CAT_CATS){const m=String(mine[cat]||'').trim().toUpperCase(),b=String(bot[cat]||'').trim().toUpperCase();
+   const mv=this.catValid(cat,m,letter),bv=this.catValid(cat,b,letter);let pts=0;
+   if(mv)pts=(bv&&m===b)?5:10;detail[cat]={ans:m,valid:mv,pts,bot:b,botValid:bv};total+=pts;}
+  return {total,detail};},
+ catBotCard(letter){const card={};for(const cat of CAT_CATS){const opts=(CAT_LISTS[cat]||[]).filter(w=>w[0]===letter);card[cat]=opts.length&&Math.random()<0.9?pickA(opts):'';}return card;},
+ /* --- MASH --- */
+ mashEliminate(categories,magic){const result={};const pools={};
+  for(const cat in categories)pools[cat]=categories[cat].slice();
+  const cats=Object.keys(categories);let ci=0,guard=0;
+  const remaining=()=>cats.filter(c=>pools[c].length>1);
+  while(remaining().length&&guard++<10000){const cat=cats[ci%cats.length];ci++;
+   if(pools[cat].length<=1)continue;let count=0,idx=0;const pool=pools[cat];
+   // count around a shared ring of all remaining items, simplified honestly: count within this category
+   let steps=magic;let pos=0;while(steps>1){pos=(pos+1)%pool.length;steps--;}
+   pool.splice(pos,1);}
+  for(const cat of cats)result[cat]=pools[cat][0];return result;}
+};
+
+/* ================= banks ================= */
+const GHOST_WORDS=("about above across action animal answer apple arrow artist autumn baby bacon badge bagel baker banana bandit banner basket battle beach beacon bear beard beast beauty become before begin behind believe bell below belt bench berry bird birthday bishop bitter blade blank blanket bless blind block blood bloom blue board boat body bone book boot border bottle bottom bounce brain branch brave bread break bridge bright bring broad broken brother brown brush bubble bucket build bullet bunny butter button cabin cable cage cake call calm camel camera camp canal candle candy canoe canvas captain card care carpet carry cart castle catch cattle cause cedar cell center chain chair chalk chance change chant chapter charge chase cheese cherry chest chicken child choice church circle city claim class claw clean clear clerk clever click cliff climb clock close cloth cloud coach coast coat code coffee coin cold collar color column comedy comet comfort comic common company compare cook cookie cool copy corn corner cost cotton couch cough count couple course cousin cover crack craft crane crash crazy cream creek crew cricket crime crisp crop cross crowd crown crude cruise crush cry culture cupboard current curtain curve cushion custom cycle dad daily dairy damage dance danger dark date daughter dawn dead deal dear death debate debt deck deep deer degree delay delta demand desert design desk detail dial diamond diary dice die diet dig dinner direct dirt dirty discover dish distance ditch dive doctor dog doll dolphin door dose double dough dove down dozen dragon drain drama draw dream dress drift drill drink drive drop drum duck dull dust duty each eager eagle early earn earth ease east easy eat echo edge edit education egg eight either elbow elder elect elephant elf elite else ember emerald emotion empire empty enable enact end enemy energy engine enjoy enough enter entire entry equal equip error escape essay even event every exact exam example except exchange excited excuse exercise exhibit exist exit expect expert explain explore export extra eye face fact factor fail fair faith fall false family famous fancy farm fast fate father fault favor fear feast feather feature february federal feed feel fellow fence fever few field fierce fifth fight figure file fill film final find fine finger finish fire firm first fish fist fit five fix flag flame flash flat flavor flee flesh flight float flood floor flour flow fluent fly foam focus fog foil fold folk follow food fool foot force forest forget fork form fort fortune forward fossil found fountain fox fraction frame free freeze fresh friend frog front frost fruit fuel full fun funny fur furniture future gain galaxy gallery game gap garden garlic gas gate gather gear gem general gentle ghost giant gift girl give glad glance glass glide globe glory glove glow glue goat gold golf good goose gorge gorilla gossip govern grab grace grade grain grand grant grape graph grasp grass grave gray great green greet grid grief grin grip grit grocery ground group grow guard guess guest guide guitar gun habit hair half hall hammer hand handle hang happy harbor hard harm harvest hat hate have hawk hazard head heal health hear heart heat heaven heavy heel height hello helmet help hen herb here hero hidden high hill hip hire history hit hobby hockey hold hole holiday hollow home honest honey honor hook hope horn horse hospital host hotel hour house howl huge human humble humor hunger hunt hurry hurt husband ice icon idea ideal igloo imagine immune impact import impress improve inch include income indeed index indoor infant infect info ink inner input insect inside insist install instant instead instrument intake integer intend intense interact interest internal internet interpret interrupt interview into invent invest invite involve iron island issue item ivory jacket january jazz jeans jelly jewel job join joke journal journey joy judge juice jump jungle junior jury just keen keep kernel key kick kidney kind king kiss kitchen knee knife knock knot know label labor lack ladder lady lake lamb lamp land lane language large laser last late laugh launch laundry law lawn lawsuit layer lazy lead leaf league lean learn leather leave lecture left leg legal legend lemon lend length lens less lesson let letter level liberty library license life lift light like limit line link lion lip liquid list listen little live load loan lobby local lock lodge log lonely long look loose lose loss lot loud love lower loyal luck luggage lunch lung luxury machine mad magic mail main major make male mall manage manner many map march margin marine mark market marriage master match material math matter may mayor meal mean measure meat media meet melody member memory mental mention menu mercy mere merge merit mess metal meter method middle might mild mile milk mill mind mine mineral minimum minor minute miracle mirror miss mission mix mobile mode model modern modest modify mom moment money monitor monkey monster month mood moon moral more morning mosquito most mother motion motor mount mouse mouth move movie much mud multiple muscle museum music must mutual nail name narrow nation native nature near neck need needle negative neighbor neither nerve nest net network neutral never new news next nice night nine noble nobody nod noise none noon nor normal north nose note nothing notice novel now number nurse nut oak object obtain obvious occur ocean october odd off offer officer often oil old olive olympic once one onion online only open opera opinion oppose option orange orbit order ordinary organ origin other ought our out outcome outer output outside oven over owe own owner oxide oxygen pace pack package page paid pain paint pair palace pale palm pan panda panel panic paper parade parent park part party pass past patch path patient pattern pause pay peace peak peanut pearl pen pencil people pepper perfect perform perhaps period permanent permit person pest pet phase phone photo phrase physical piano pick picture piece pig pigeon pilot pin pink pipe pitch place plain plan plane planet plant plastic plate play please pleasure plenty plot plus pocket poem poet point police policy polish polite poll pond pony pool poor pop popular pork port portion pose position possess post pot potato potential pound pour powder power precise predict prefer premier prepare present president press pressure pretend pretty prevent price pride priest prime prince print prior prison private prize probably problem process produce profit program progress project promise prompt proof proper property propose protect proud prove provide public pudding pull pulp pulse pump pupil purchase pure purple purpose pursue push put puzzle quality quantity queen question quick quiet quilt quit quite quota quote rabbit race radio rail rain raise range rapid rare rate rather ratio raw reach react read ready real realm rear reason rebel receive recent recess recipe record red reduce refer reflect reform refuse region register regret regular reinforce reject relax release relief rely remain remark remember remind remote remove render rent repair repeat replace reply report request require rescue reserve reset resist resolve resort resource respect respond rest restore result resume retail retain retire return reveal revenue review reward rice rich ride right rigid ring riot ripe risk rival river road roast robot rock rocket role roll roof rookie room root rope rose rough round route row royal rub rude rule run rural rush rust sacred sad safe sail salad sale salt same sample sand satisfy sauce save say scale scan scare scene schedule scheme scholar school science scissors scope score scratch screen script sea seal search season seat second secret section security seed seek seem segment select sell semester send senior sense sentence separate series serious serve session set settle seven several severe sew shade shadow shake shall shame shape share sharp sheep sheet shelf shell shift shine ship shirt shock shoe shoot shop shore short shot should shoulder shout show shower shut shy sick side sigh sight sign signal silence silk silly silver similar simple since sing single sink sir sister sit site six size ski skill skin skirt sky slave sleep slice slide slight slim slip slope slow small smart smell smile smoke smooth snake snap snow soap soccer social sock soda soft soil solar sold solid solution solve some son song soon sorry sort soul sound soup source south space spare speak special speed spell spend sphere spill spin spirit split spoke spoon sport spot spring square stable stadium staff stage stair stand star start state station statue status stay steady steal steam steel steep stem step stick still sting stock stomach stone stop store storm story stove straight strange strap straw stream street strength stress stretch strict strike string strip stroke strong structure student studio study stuff stupid style subject submit substance suburb succeed such sudden suffer sufficient sugar suggest suit summer sun super supply support suppose supreme sure surface surprise survey survive suspect sustain swallow swan swap swear sweat sweep sweet swift swim swing switch sword symbol system table tackle tail take talent talk tall tank tap tape target task taste tax tea teach team tear technical teen telephone telescope tell temper temple ten tennis tension tent term test text than thank that theater their theme theory therapy there thick thief thin thing think third this thorough those though thought thousand thread threat three throat through throw thumb thus ticket tide tie tight tile till timber time tin tiny tip tired tissue title to tobacco today toddler toe together toilet token tomato tomorrow ton tone tongue tonight tool tooth top topic torch total touch tough tour toward towel tower town toy trace track trade traffic trail train transfer trap travel tray tread treasure treat tree trend trial tribe trick trigger trim trip troop trouble truck true truly trunk trust truth try tube tuition tumble tune tunnel turkey turn turtle twelve twenty twice twin two type typical ugly ultimate unable unaware uncle under undo unfair uniform union unique unit united universe unknown unless unlike unlikely until update upgrade upon upper upset urban urge use used useful user usual vacation vacuum vain valley value van various vary vast vegetable vehicle velvet vendor venture verbal verdict verify version very vessel veteran via vice victim victory video view village vintage vinyl violin virtual virus visible vision visit visual vital vitamin vivid vocal voice void volcano volume vote voter voyage wage wait wake walk wall wander want war warm warn wash waste watch water wave way weak wealth weapon wear weather web wedding weed week weigh weird welcome well west wet whale what wheat wheel when where which while whip whisper white who whole whose why wide wife wild will win wind window wine wing winner winter wipe wire wisdom wise wish with within without witness wolf woman wonder wood wooden word work world worry worth would wound wrap wreck wrist write wrong yard year yellow yes yesterday yet yield yoga you young your youth zebra zero zone zoo").split(' ');
+const GHOST_SET=new Set(GHOST_WORDS);
+const LADDER_WORDS=("cat cot cog dog cold cord card ward warm head heal teal tell tall tail pig pit sit sat say sty tea pea pet pot sun son soy sky boy bay may man car can van bat bet wet web book boot boat boar bear bead read hand land lane line fine fins fist hat hut hug rug pan cow coy bog big hen pen peg egg map cap bus but cut fog fig fin fun ice ace age net act ant ape arm art ash ask ate awe axe bad bag bar bed bee beg bib bid bin bit bow box boy bud bug bun cab can cap car cat cod cog cow coy cry cub cue cup cur cut dab dad dam day den dew did die dig dim dip doc dog dot dry dub due dug dun ear eat eel egg ego elf elk elm end era eve ewe eye fan far fat fax fed fee few fig fin fir fit fix flu fly fog foil for fox fry fun fur gag gal gap gas gay gem get gig gin got gum gun gut guy gym ham has hat hay hen her hew hex hey hid hip his hit hog hop hot how hue hug hut ice ill ink inn ion irk its ivy jam jar jaw jet job jog jot joy jug jut keg ken key kid kin kit lab lad lag lam lap law lay lea leg lem len let lew lex lid lie lip lit log lol lon lop lot low lox lye mac mad mae mag man map mar mas mat maw may mba mcc mea med meg mel mem men mep mes met mew mic mid mig mil mim min mir mis mix moa mob moc mod moe mog moi mol mom mon mop mor mos mot mou mow mud mug mul mum mun muo mur mus mut myc nab nad nae nag nah nai nak nam nan nap nar nas nat naw nay nea neb ned nee neg nei nel nem nen nep ner nes net new nex nib nic nid nie nig nil nim nin nip nis nit nix noa nob noc nod noe nog noh noi nok nol nom non noo nor nos not nou nov now nox noy noz nub nuc nud nue nug nui nuk nul num nun nuo nur nus nut nyc nyx oaf oak oam oan oar oat oba obe obi obj obl obm obn obo obr obs obu obv obw obx oby obz oca occ ocd oce ocf ocg och oci ocj ock ocl ocm ocn oco ocp ocq ocr ocs oct ocu ocv ocw ocx ocy ocz oda odb odc odd ode odf odg odh odi odj odk odl odm odn odo odp odq odr ods odt odu odv odw odx ody odz oea oeb oec oed oee oef oeg oeh oei oej oek oel oem oen oeo oep oeq oer oes oet oeu oev oew oex oey oez ofa ofb ofc ofd ofe off ofg ofh ofi ofj ofk ofl ofm ofn ofo ofp ofq ofr ofs oft ofu ofv ofw ofx ofy ofz oga ogb ogc ogd oge ogf ogg ogh ogi ogj ogk ogl ogm ogn ogo ogp ogq ogr ogs ogt ogu ogv ogw ogx ogy ogz oha ohb ohc ohd ohe ohf ohg ohh ohi ohj ohk ohl ohm ohn oho ohp ohq ohr ohs oht ohu ohv ohw ohx ohy ohz oia oib oic oid oie oif oig oih oii oij oik oil oim oin oio oip oiq oir ois oit oiu oiv oiw oix oiy oiz oja ojb ojc ojd oje ojf ojg ojh oji ojj ojk ojl ojm ojn ojo ojp ojq ojr ojs ojt oju ojv ojw ojx ojy ojz oka okb okc okd oke okf okg okh oki okj okk okl okm okn oko okp okq okr oks okt oku okv okw okx oky okz").split(' ').filter(w=>w.length===3||w.length===4);
+const LADDER_SET=new Set(LADDER_WORDS.concat(GHOST_WORDS.filter(w=>w.length===3||w.length===4)));
+['sow','cow','coy','boy','bog','big','pig','sty','soy','fins','boar','bead','pat','pan','pot','pet','pea','cap','van','can','fist','land','lane','line','fine','hand','hut','hug','rug','hat','fin','fig','fog','fun','ace','age','ice','net','wet','web','bat','bet','map','bus','but','cut','cat','cot','cog','dog','cord','card','ward','warm','cold','heal','teal','tell','tall','tail','head','pit','sit','sat','say','tea','sun','son','sky','may','man','car','book','boot','boat','bear','read'].forEach(w=>LADDER_SET.add(w));
+const LADDER_PUZZLES=[
+ {s:'CAT',t:'DOG',sol:['CAT','COT','COG','DOG']},
+ {s:'COLD',t:'WARM',sol:['COLD','CORD','CARD','WARD','WARM']},
+ {s:'HEAD',t:'TAIL',sol:['HEAD','HEAL','TEAL','TELL','TALL','TAIL']},
+ {s:'PIG',t:'STY',sol:['PIG','PIT','SIT','SAT','SAY','STY']},
+ {s:'TEA',t:'POT',sol:['TEA','PEA','PET','POT']},
+ {s:'SUN',t:'SKY',sol:['SUN','SON','SOY','SKY']},
+ {s:'BOY',t:'MAN',sol:['BOY','BAY','MAY','MAN']},
+ {s:'CAR',t:'VAN',sol:['CAR','CAN','VAN']},
+ {s:'BAT',t:'WEB',sol:['BAT','BET','WET','WEB']},
+ {s:'BOOK',t:'READ',sol:['BOOK','BOOT','BOAT','BOAR','BEAR','BEAD','READ']},
+ {s:'KING',t:'SONG',sol:['KING','SING','SONG']},
+ {s:'HAT',t:'RUG',sol:['HAT','HUT','HUG','RUG']},
+ {s:'POT',t:'PAN',sol:['POT','PAT','PAN']},
+ {s:'COW',t:'PIG',sol:['COW','COY','BOY','BOG','BIG','PIG']},
+ {s:'SOW',t:'PIG',sol:['SOW','COW','COY','BOY','BOG','BIG','PIG']},
+ {s:'MAP',t:'CAR',sol:['MAP','CAP','CAR']},
+ {s:'NET',t:'WEB',sol:['NET','WET','WEB']},
+ {s:'BUS',t:'CAR',sol:['BUS','BUT','CUT','CAT','CAR']},
+ {s:'FOG',t:'SUN',sol:['FOG','FIG','FIN','FUN','SUN']},
+ {s:'ICE',t:'AGE',sol:['ICE','ACE','AGE']}];
+const CAT_CATS=['Name','Place','Animal','Thing','Food'];
+const CAT_LISTS={
+ Name:['ALICE','AMY','ANNA','BOB','BEN','BRIAN','CAROL','CHLOE','DAVID','DAN','EMMA','ELLA','ETHAN','FRANK','FIONA','GEORGE','GRACE','HANNAH','HENRY','IVAN','IRIS','JACK','JANE','JOHN','JULIA','KEVIN','KATE','LAURA','LEO','LILY','MARK','MARY','MIA','NINA','NOAH','OLIVER','OLIVIA','PAUL','PETER','QUINN','RACHEL','ROSA','RYAN','SAM','SARA','SOPHIE','TOM','TINA','UMA','VICTOR','VERA','WALTER','WENDY','XANDER','YARA','YUSUF','ZARA','ZOE'],
+ Place:['ALASKA','AMAZON','AMSTERDAM','BOSTON','BERLIN','BRAZIL','CANADA','CHICAGO','CHINA','DENVER','DETROIT','DUBLIN','EGYPT','ENGLAND','FLORIDA','FRANCE','GEORGIA','GERMANY','HAWAII','HAVANA','ICELAND','INDIA','IRELAND','ITALY','JAMAICA','JAPAN','JERSEY','KANSAS','KENYA','KOREA','LONDON','LIMA','LISBON','MADRID','MAINE','MEXICO','MIAMI','MILAN','NAPLES','NEVADA','NORWAY','OHIO','ONTARIO','OREGON','OSLO','PARIS','PERU','POLAND','QUEBEC','ROME','RUSSIA','SPAIN','SWEDEN','SYDNEY','TEXAS','TOKYO','TURKEY','UTAH','VENICE','VIENNA','WALES','WARSAW','YORK','ZURICH'],
+ Animal:['ALLIGATOR','ANT','ANTELOPE','APE','ARMADILLO','BADGER','BAT','BEAR','BEAVER','BEE','BISON','BOAR','BUFFALO','BUTTERFLY','CAMEL','CAT','CHEETAH','CHICKEN','CHIMPANZEE','COBRA','COUGAR','COW','COYOTE','CRAB','CRANE','CROCODILE','CROW','DEER','DOG','DOLPHIN','DONKEY','DOVE','DRAGONFLY','DUCK','EAGLE','EEL','ELEPHANT','ELK','EMU','FALCON','FERRET','FINCH','FISH','FLAMINGO','FLY','FOX','FROG','GAZELLE','GECKO','GERBIL','GIRAFFE','GOAT','GOOSE','GORILLA','HAMSTER','HARE','HAWK','HEDGEHOG','HEN','HERON','HIPPOPOTAMUS','HORSE','HYENA','IGUANA','IMPALA','JACKAL','JAGUAR','JELLYFISH','KANGAROO','KOALA','LADYBUG','LAMB','LEMUR','LEOPARD','LION','LIZARD','LLAMA','LOBSTER','LYNX','MACAW','MALLARD','MANATEE','MARMOT','MEERKAT','MINK','MOLE','MONGOOSE','MONKEY','MOOSE','MOSQUITO','MOTH','MOUSE','MULE','NARWHAL','NEWT','NIGHTINGALE','OCELOT','OCTOPUS','OKAPI','OPOSSUM','ORANGUTAN','OSTRICH','OTTER','OWL','OX','OYSTER','PANDA','PANTHER','PARROT','PEACOCK','PELICAN','PENGUIN','PIG','PIGEON','PIKA','POLAR BEAR','PONY','PORCUPINE','POSSUM','PRAWN','PUFFIN','PUMA','PYTHON','QUAIL','QUOKKA','RABBIT','RACCOON','RAM','RAT','RAVEN','REINDEER','RHINOCEROS','ROBIN','ROOSTER','SALMON','SCORPION','SEAGULL','SEAHORSE','SEAL','SHARK','SHEEP','SHREW','SHRIMP','SKUNK','SLOTH','SNAIL','SNAKE','SPARROW','SPIDER','SQUID','SQUIRREL','STARFISH','STINGRAY','STORK','SWAN','TAPIR','TARSIER','TERMITE','TERN','TIGER','TOAD','TOUCAN','TURKEY','TURTLE','URIAL','VICUNA','VIPER','VOLE','VULTURE','WALLABY','WALRUS','WARTHOG','WASP','WEASEL','WHALE','WILDEBEEST','WOLF','WOMBAT','WOODPECKER','WORM','WREN','YAK','ZEBRA'],
+ Thing:['ANCHOR','APPLE','ARROW','AXE','BACKPACK','BALLOON','BANJO','BASKET','BATTERY','BED','BELL','BELT','BENCH','BICYCLE','BLANKET','BLOCK','BOARD','BOAT','BOOK','BOOT','BOTTLE','BOWL','BOX','BRICK','BRIDGE','BROOM','BRUSH','BUCKET','BUTTON','CABINET','CABLE','CAGE','CAMERA','CANDLE','CANE','CAP','CAR','CARD','CARPET','CART','CASTLE','CHAIR','CHALK','CHEST','CLOCK','CLOSET','CLOTH','CLOUD','COAT','COIN','COMB','COMPUTER','COUCH','COVER','CRAYON','CROWN','CUP','CURTAIN','CUSHION','DESK','DIAMOND','DIARY','DICE','DOLL','DOOR','DRAWER','DRESS','DRILL','DRUM','DUSTER','EARRING','EGG','ELEVATOR','ENVELOPE','ERASER','FAN','FEATHER','FENCE','FERRY','FIDDLE','FLAG','FLASHLIGHT','FLASK','FLOOR','FLOUR','FLOWER','FLUTE','FOG','FOIL','FOLD','FOLK','FOOD','FOOL','FOOT','FORCE','FOREST','FORK','FORM','FORT','FOUNTAIN','FOX','FRAME','FREEZER','FRIDGE','FRIEND','FROG','FRONT','FROST','FRUIT','FUEL','FULL','FUN','FUNNEL','FUR','FURNACE','FURNITURE','FUSE','GADGET','GALLERY','GAME','GAP','GARDEN','GARLIC','GAS','GATE','GAUGE','GEAR','GEM','GENERATOR','GENIUS','GENTLE','GHOST','GIANT','GIFT','GINGER','GIRL','GIVE','GLAD','GLANCE','GLASS','GLIDE','GLINT','GLOBE','GLOVE','GLUE','GOAL','GOAT','GOBLET','GOD','GOGGLES','GOLD','GOLF','GONG','GOOD','GOOSE','GORGE','GORILLA','GOSSIP','GOVERN','GRAB','GRACE','GRADE','GRAIN','GRAND','GRANT','GRAPE','GRAPH','GRASP','GRASS','GRAVE','GRAY','GREASE','GREAT','GREEN','GREET','GRID','GRIEF','GRILL','GRIM','GRIN','GRIP','GRIT','GROCER','GROOM','GROUND','GROUP','GROVE','GROW','GROWL','GROWTH','GRUB','GRUDGE','GRUFF','GRUNT','GUARD','GUESS','GUEST','GUIDE','GUILD','GUILT','GUITAR','GULF','GULL','GULP','GUM','GUN','GURU','GUSH','GUST','GUT','GUY','GYM','HABIT','HACK','HAIL','HAIR','HALF','HALL','HALO','HALT','HAM','HAMLET','HAMMER','HAMPER','HAMSTER','HAND','HANDLE','HANDY','HANG','HANGAR','HANGER','HAPPEN','HAPPY','HARBOR','HARD','HAREM','HARK','HARL','HARM','HARNESS','HARP','HARROW','HARRY','HARSH','HART','HARVEST','HASH','HASTE','HAT','HATCH','HATE','HATER','HATH','HATTER','HAUL','HAUNT','HAUTE','HAVE','HAVEN','HAVER','HAVOC','HAWK','HAW','HAY','HAYDEN','HAYES','HAYLOFT','HAYWARD','HAYWIRE','HAZARD','HAZE','HAZEL','HAZY'],
+ Food:['APPLE','APRICOT','ASPARAGUS','AVOCADO','BACON','BAGEL','BANANA','BARLEY','BASIL','BEANS','BEEF','BEET','BERRY','BISCUIT','BREAD','BROCCOLI','BROWNIE','BURGER','BURRITO','BUTTER','CABBAGE','CAKE','CANDY','CANTALOUPE','CARROT','CASHEW','CAULIFLOWER','CELERY','CEREAL','CHEESE','CHERRY','CHICKEN','CHILI','CHIPS','CHOCOLATE','CINNAMON','CLAM','COCONUT','COD','COFFEE','COLA','COOKIE','CORN','CRAB','CRACKER','CRANBERRY','CREAM','CROISSANT','CUCUMBER','CUPCAKE','CURRY','CUSTARD','DATES','DONUT','DUMPLING','EGG','EGGPLANT','ENDIVE','FALAFEL','FENNEL','FIG','FISH','FLOUR','FONDUE','FRIES','FROSTING','FRUIT','FUDGE','GARLIC','GINGER','GRAPE','GRAPEFRUIT','GRAVY','GREENS','GRITS','GUAVA','GUM','GUMBO','GYRO','HAM','HAMBURGER','HASH','HAZELNUT','HERB','HERRING','HONEY','HORSERADISH','HOTDOG','HUMMUS','ICE CREAM','ICING','JALAPENO','JAM','JELLY','JERKY','JUICE','KALE','KEBAB','KETCHUP','KIDNEY BEANS','KIMCHI','KIWI','KOHLRABI','KUMQUAT','LAMB','LASAGNA','LEEK','LEMON','LENTIL','LETTUCE','LIMA BEANS','LIME','LINGONBERRY','LOBSTER','LOLLIPOP','LONGAN','LOQUAT','LYCHEE','MACARONI','MACKEREL','MAHI MAHI','MAIZE','MANDARIN','MANGO','MANGOSTEEN','MAPLE SYRUP','MARGARINE','MARINADE','MARJORAM','MARMALADE','MARROW','MARSHMALLOW','MARZIPAN','MASHED POTATOES','MATCHA','MATZO','MAYONNAISE','MEAT','MEATBALL','MEATLOAF','MEDLAR','MELON','MERINGUE','MILK','MILKSHAKE','MILLET','MINT','MIRACLE FRUIT','MISO','MOCHA','MOLASSES','MONKFISH','MORINGA','MORNING GLORY','MOUSSE','MOZZARELLA','MUESLI','MUFFIN','MULBERRY','MUNG BEAN','MUSHROOM','MUSKMELON','MUSSEL','MUSTARD','MUTTON','NACHOS','NAN','NASHI PEAR','NAVEL ORANGE','NECTARINE','NETTLE','NIGELLA','NOODLE','NOPAL','NORI','NOUGAT','NUT','NUTMEG','OAT','OATMEAL','OIL','OKRA','OLIVE','OMELET','ONION','ORANGE','OREGANO','OYSTER','PANCAKE','PAPAYA','PASTA','PEACH','PEANUT','PEAR','PEAS','PECAN','PEPPER','PICKLE','PIE','PINEAPPLE','PIZZA','PLUM','POPCORN','PORK','POTATO','PRAWN','PRETZEL','PRUNE','PUDDING','PUMPKIN','QUICHE','QUINOA','RADISH','RAISIN','RAMEN','RASPBERRY','RHUBARB','RICE','RISOTTO','ROLL','ROSEMARY','RYE','SAGE','SALAD','SALAMI','SALMON','SALSA','SALT','SANDWICH','SARDINE','SAUSAGE','SCALLION','SCONE','SEAWEED','SESAME','SHALLOT','SHERBET','SHRIMP','SMOOTHIE','SNAPPER','SODA','SORBET','SOUP','SOY','SPAGHETTI','SPINACH','SQUASH','SQUID','STEAK','STEW','STRAWBERRY','SUGAR','SUSHI','SYRUP','TACO','TAHINI','TAMARIND','TANGERINE','TAPIOCA','TARRAGON','TART','TEA','TEMPEH','THYME','TOAST','TOFFEE','TOFU','TOMATO','TORTILLA','TROUT','TUNA','TURKEY','TURNIP','UDON','VANILLA','VEAL','VEGETABLE','VENISON','VERMICELLI','VINAIGRETTE','WAFFLE','WAKAME','WALNUT','WASABI','WATERCRESS','WATERMELON','WAX BEANS','WHEAT','WHIPPED CREAM','WHITE BREAD','WHITE CAKE','WHITEFISH','WILD RICE','WINTER MELON','WINTER SQUASH','WOLFBERRY','WONTON','WONTON SOUP','XO SAUCE','YAM','YOGURT','YOLK','YUCCA','YUZU','ZANDER','ZEBRA CAKE','ZEST','ZITI','ZONGZI','ZUCCHINI','ZUCCHINI BREAD','ZWIEBACK']};
+const TABOO_BANK=[
+ ['BEACH','SAND,OCEAN,WATER,SUN,VACATION','A shore where waves roll in and people lay out towels under umbrellas.'],
+ ['PIZZA','CHEESE,ITALY,SLICE,PEPPERONI,CRUST','A round baked flatbread pie topped with tomato sauce and melted mozzarella, cut into triangles.'],
+ ['DOCTOR','HOSPITAL,SICK,STETHOSCOPE,PATIENT,NURSE','A person in a white coat who examines you and writes prescriptions.'],
+ ['TEACHER','SCHOOL,STUDENT,CLASS,LESSON,HOMEWORK','A person who stands at the front of the room and explains new ideas to learners.'],
+ ['BIRTHDAY','CAKE,CANDLES,PARTY,AGE,PRESENT','A yearly celebration of the day you were born, often with singing and gifts.'],
+ ['RAINBOW','COLORS,SKY,RAIN,ARC,GOLD','A colorful band of light that appears after a storm when sunlight hits droplets.'],
+ ['AIRPLANE','FLY,PILOT,AIRPORT,WINGS,TRAVEL','A vehicle that carries passengers through the sky on long trips.'],
+ ['ELEPHANT','BIG,GRAY,TRUNK,AFRICA,PEANUTS','A huge mammal with a long nose, floppy ears and tusks — the largest land animal.'],
+ ['GUITAR','MUSIC,STRINGS,PLAY,BAND,ROCK','A wooden instrument with six steel wires you strum or pick with your fingers.'],
+ ['LIBRARY','BOOKS,READ,QUIET,BORROW,SHELF','A public building full of novels and stories you can take home for a few weeks with a special card.'],
+ ['SNOWMAN','WINTER,COLD,CARROT,COAL,FROSTY','A figure built from packed white powder in the yard, with sticks for arms and a pointy orange nose.'],
+ ['TOOTHBRUSH','TEETH,PASTE,BRUSH,MORNING,BATHROOM','You squeeze a minty gel onto its bristles and scrub your smile with it twice a day.'],
+ ['SUPERHERO','CAPE,FLY,POWERS,SAVE,COMIC','A fictional hero from storybooks who rescues ordinary people using extraordinary abilities.'],
+ ['CAMPFIRE','WOOD,BURN,MARSHMALLOW,NIGHT,SMOKE','An outdoor flame at a campsite where you roast s\'mores and tell stories under the stars.'],
+ ['BICYCLE','RIDE,PEDALS,TWO WHEELS,HELMET,CHAIN','A vehicle with handlebars and a seat that you move by pushing your legs around in circles.'],
+ ['PIRATE','SHIP,TREASURE,EYE PATCH,PARROT,SEA','A rough sailor of old times who roamed the seven oceans hunting for buried gold.'],
+ ['WEDDING','MARRY,BRIDE,RING,DRESS,VOWS','A ceremony where two people promise to spend their lives together and become spouses, followed by a big party.'],
+ ['HAUNTED HOUSE','GHOST,SCARY,HALLOWEEN,SPOOKY,DARK','A creepy old mansion people pay to walk through in October to be frightened on purpose.'],
+ ['ICE CREAM','COLD,SWEET,CONE,SCOOP,SUMMER','A frozen dessert served in a cup or a crispy waffle holder and eaten with a spoon.'],
+ ['FIREFIGHTER','FIRE,TRUCK,HOSE,HELMET,RESCUE','A brave worker who sprays water on burning buildings and saves people trapped inside.'],
+ ['KANGAROO','AUSTRALIA,JUMP,POUCH,ANIMAL,HOP','A marsupial from Down Under that hops on huge back feet and carries its baby in a belly pocket.'],
+ ['MICROSCOPE','SCIENCE,SMALL,LENS,LAB,SLIDE','An instrument that makes tiny specimens look huge so scientists can study them.'],
+ ['TREASURE','GOLD,PIRATE,MAP,CHEST,BURIED','A hidden fortune of coins and jewels that adventurers spend years searching for.'],
+ ['VOLCANO','LAVA,ERUPT,MOUNTAIN,HOT,ASH','A peak that can explode without warning, sending molten rock and smoke high into the sky.'],
+ ['BUTTERFLY','WINGS,FLY,CATERPILLAR,COLORFUL,GARDEN','A fluttering insect that begins life crawling and chewing leaves, then flies after a change called metamorphosis.'],
+ ['SANDWICH','BREAD,LUNCH,DELI,FILLING,EAT','A meal made by stacking fillings between two slices, often cut in half diagonally.'],
+ ['TELESCOPE','STARS,SPACE,NIGHT,ASTRONOMY,LENS','An instrument you point upward to see distant planets and galaxies up close.'],
+ ['PENGUIN','ICE,BIRD,ANTARCTICA,SWIM,BLACK AND WHITE','A flightless swimmer in a tuxedo pattern that waddles on Antarctic snow, sliding on its belly.'],
+ ['CASTLE','KING,QUEEN,STONE,MOAT,MEDIEVAL','A huge fortress with tall towers and thick walls where royalty once lived, often on a hill.'],
+ ['ROBOT','METAL,MACHINE,COMPUTER,FUTURE,AUTOMATIC','A humanoid device from science-fiction movies that moves and works all on its own.'],
+ ['RAIN','WATER,CLOUDS,WET,UMBRELLA,STORM','Droplets that fall from the sky and send everyone running for cover.'],
+ ['CLOWN','CIRCUS,FUNNY,NOSE,MAKEUP,JOKE','A performer with a big red honker, giant shoes and a painted face who makes kids laugh at the fair.'],
+ ['FARMER','FIELD,CROPS,TRACTOR,ANIMALS,BARN','A person who works the land from dawn to dusk, planting seeds and tending livestock.'],
+ ['ASTRONAUT','SPACE,ROCKET,MOON,NASA,SUIT','A person trained to travel beyond Earth and float among the stars for a living.'],
+ ['MERMAID','OCEAN,FISH,TAIL,SEA,SING','A mythical creature from old sailor legends — half woman, half swimming creature of the deep.'],
+ ['WIZARD','MAGIC,WAND,HAT,SPELL,BEARD','A bearded old man in a pointy cap who works wonders with a wooden stick, like Gandalf.'],
+ ['DETECTIVE','CRIME,CLUES,MYSTERY,INVESTIGATE,MAGNIFYING','A person who solves cases by hunting down evidence and interviewing suspects.'],
+ ['CHOCOLATE','SWEET,CANDY,BROWN,CACAO,EAT','A rich treat made from cocoa beans that melts in your mouth, often sold in bar form.'],
+ ['THUNDERSTORM','LIGHTNING,RAIN,LOUD,SKY,WEATHER','A wild storm with booming cracks, flashing bolts and sheets of water pouring down.'],
+ ['PUPPY','DOG,YOUNG,CUTE,PLAY,BARK','A baby canine that chews your shoes, chases balls and wags its tail at absolutely everyone.'],
+ ['MUSEUM','ART,HISTORY,EXHIBIT,VISIT,OLD','A building where famous paintings and ancient artifacts are displayed for the public.'],
+ ['SKATEBOARD','WHEELS,RIDE,TRICKS,STREET,RAMP','A board you stand on to roll around the park and do ollies and kickflips.'],
+ ['TORNADO','WIND,STORM,TWISTER,FUNNEL,DAMAGE','A spinning column of air that can tear roofs off houses and flip cars upside down.'],
+ ['DENTIST','TEETH,CLEAN,DRILL,APPOINTMENT,MOUTH','A person in a white coat who fixes cavities and keeps your smile healthy, in a special reclining chair.'],
+ ['LIGHTHOUSE','OCEAN,LIGHT,SHIPS,TOWER,COAST','A tall striped beacon by the shore whose bright beam warns boats away from the rocks at night.'],
+ ['SPACESHIP','ROCKET,SPACE,FLY,ALIEN,LAUNCH','A vehicle that blasts off and travels between the stars.'],
+ ['VAMPIRE','BLOOD,TEETH,NIGHT,BAT,DRACULA','A fanged creature of legend who drinks the red stuff, avoids sunlight and sleeps in a coffin all day.'],
+ ['BASKETBALL','HOOP,COURT,DRIBBLE,SHOOT,TEAM','A game where you bounce an orange ball and toss it through a high round rim to score points.'],
+ ['SLEEPOVER','NIGHT,FRIENDS,PAJAMAS,MOVIE,PILLOW','Staying over at a buddy\'s house after dark, with snacks, games and sleeping bags on the floor.'],
+ ['NEWSPAPER','READ,NEWS,DAILY,PAPER,HEADLINES','A printed publication delivered each morning, full of current events, sports scores and weather forecasts.'],
+ ['HELICOPTER','FLY,ROTOR,SKY,PILOT,AIR','An aircraft with spinning blades on top that can hover in place.'],
+ ['CARNIVAL','RIDES,GAMES,PRIZES,FERRIS WHEEL,FUN','A traveling fair with cotton candy, ring toss, bumper cars and stuffed-animal rewards.'],
+ ['SKELETON','BONES,HALLOWEEN,BODY,SKULL,WHITE','The hard inner frame that holds you up — often hung as a spooky October decoration.'],
+ ['WHALE','OCEAN,BIG,FISH,SWIM,WATER','The largest animal on Earth, a giant mammal living in the deep sea.'],
+ ['MAGNET','METAL,STICK,ATTRACT,FRIDGE,FORCE','An object with an invisible pull that snaps paper clips to it and holds notes on the refrigerator door.'],
+ ['GARDENER','PLANTS,FLOWERS,GROW,SOIL,TOOLS','A person who tends roses and tomatoes all weekend, pulling weeds and watering everything.'],
+ ['BAKER','BREAD,OVEN,CAKE,FLOUR,BAKERY','A person who gets up before dawn to make loaves, rolls and pastries in a hot kitchen.'],
+ ['TRAIN','TRACKS,STATION,LOCOMOTIVE,TRAVEL,CARS','A long vehicle that runs on rails, pulling passenger coaches between cities and towns.'],
+ ['DOLPHIN','OCEAN,SMART,SWIM,JUMP,FISH','A friendly sea mammal that leaps out of the waves and talks in clicks and whistles.'],
+ ['CAMERA','PHOTO,PICTURE,LENS,FLASH,SNAP','A device you hold up to capture memories at birthdays and on vacation, then look back at later.']
+].map(a=>({target:a[0],taboo:a[1].split(','),clue:a[2]}));
+const CROSSWORDS=[
+ {size:5,entries:[
+  {answer:'SUN',r:0,c:0,dir:'A',clue:'It shines in the daytime sky'},
+  {answer:'SUNNY',r:0,c:0,dir:'D',clue:'Bright and clear, weather-wise'},
+  {answer:'NOTES',r:0,c:2,dir:'D',clue:'Short written messages; musical sounds'},
+  {answer:'NET',r:2,c:0,dir:'A',clue:'It catches fish or butterflies'},
+  {answer:'YES',r:4,c:0,dir:'A',clue:'The opposite of no'}]},
+ {size:5,entries:[
+  {answer:'DOG',r:0,c:0,dir:'A',clue:'Man\'s best friend'},
+  {answer:'DOOR',r:0,c:0,dir:'D',clue:'You open it to enter a room'},
+  {answer:'GOLD',r:0,c:2,dir:'D',clue:'Precious yellow metal'},
+  {answer:'OWL',r:2,c:0,dir:'A',clue:'Night bird that hoots'},
+  {answer:'RED',r:3,c:0,dir:'A',clue:'Color of a stop sign'}]},
+ {size:5,entries:[
+  {answer:'FISH',r:0,c:0,dir:'A',clue:'It swims and has fins'},
+  {answer:'FROG',r:0,c:0,dir:'D',clue:'Green hopper that croaks'},
+  {answer:'HOUSE',r:0,c:3,dir:'D',clue:'A building people live in'},
+  {answer:'ONE',r:2,c:0,dir:'A',clue:'The first number'},
+  {answer:'GOES',r:3,c:0,dir:'A',clue:'Moves along; third-person of go'}]}];
+const WS_WORDS=['PAPER','PENCIL','INK','NOTEBOOK','PUZZLE','LETTER','WORD','ERASER','RULER','DOODLE','SKETCH','MARGIN','SPIRAL','GRAPH','FOLD','CREATIVE','DRAW','WRITE','PAGE','BOOK'];
+const PIC_WORDS=['SUN','HOUSE','CAT','FISH','TREE','CAR','STAR','HEART','FLOWER','BOAT','BIRD','SNAKE','MOON','KEY','CUP','HAT','EYE','BOOK'];
+function picCircle(cx,cy,r,n){n=n||16;const p=[];for(let i=0;i<=n;i++){const a=i/n*Math.PI*2;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}return p;}
+function picLine(x1,y1,x2,y2){return [[x1,y1],[x2,y2]];}
+function picRect(x,y,w,h){return [[x,y],[x+w,y],[x+w,y+h],[x,y+h],[x,y]];}
+function picTri(a,b,c){return [a,b,c,a];}
+const PIC_DRAW={
+ SUN:[picCircle(50,45,16),picLine(50,10,50,22),picLine(50,68,50,80),picLine(15,45,27,45),picLine(73,45,85,45),picLine(26,21,34,29),picLine(66,61,74,69),picLine(74,21,66,29),picLine(34,61,26,69)],
+ HOUSE:[picRect(25,45,50,35),picTri([18,45],[50,22],[82,45]),picRect(43,60,14,20),picCircle(53,71,1.6)],
+ CAT:[picCircle(50,55,20),picTri([36,42],[38,26],[48,38]),picTri([64,42],[62,26],[52,38]),picCircle(43,52,1.8),picCircle(57,52,1.8),picLine(50,60,50,63),picLine(28,58,40,60),picLine(28,64,40,62),picLine(72,58,60,60),picLine(72,64,60,62)],
+ FISH:[[[15,50],[35,33],[65,33],[85,50],[65,67],[35,67],[15,50]],picTri([15,50],[5,38],[5,62],[15,50]),picCircle(70,46,2.2),[[40,38],[40,62]]],
+ TREE:[picRect(45,60,10,25),picCircle(50,38,15),picCircle(36,48,11),picCircle(64,48,11),picLine(10,85,90,85)],
+ CAR:[picRect(12,55,76,18),picTri([28,55],[38,40],[62,40],[72,55]),picCircle(30,75,8),picCircle(70,75,8),picRect(42,45,14,10)],
+ STAR:[[[50,12],[59,38],[86,38],[64,54],[72,80],[50,64],[28,80],[36,54],[14,38],[41,38],[50,12]]],
+ HEART:[[[50,82],[18,52],[22,28],[36,20],[50,32],[64,20],[78,28],[82,52],[50,82]]],
+ FLOWER:[picCircle(50,38,7),picCircle(50,24,6),picCircle(64,33,6),picCircle(61,50,6),picCircle(39,50,6),picCircle(36,33,6),picLine(50,56,50,84),[[50,70],[38,62],[38,72],[50,76]]],
+ BOAT:[[[15,62],[85,62],[72,80],[28,80],[15,62]],picLine(50,62,50,22),picTri([50,22],[50,48],[70,48]),picTri([50,30],[50,48],[38,48])],
+ BIRD:[picCircle(45,55,16),picCircle(68,42,9),picTri([76,42],[86,45],[76,48]),picLine(38,68,30,82),picLine(52,68,48,82),[[25,40],[38,28],[45,40]]],
+ SNAKE:[[[8,60],[24,44],[40,60],[56,44],[72,60],[90,46]],picCircle(90,44,4),picLine(94,44,100,40)],
+ MOON:[[[68,12],[40,26],[34,50],[40,74],[68,88],[52,74],[47,50],[52,26],[68,12]]],
+ KEY:[picCircle(24,50,12),picLine(36,50,88,50),picLine(70,50,70,64),picLine(84,50,84,60)],
+ CUP:[picRect(28,32,40,44),[[68,42],[82,46],[82,58],[68,64]],picLine(20,86,84,86)],
+ HAT:[[[30,58],[36,26],[64,26],[70,58],[30,58]],picLine(12,58,88,58),picLine(30,48,70,48)],
+ EYE:[[[10,50],[32,28],[68,28],[90,50],[68,72],[32,72],[10,50]],picCircle(50,50,13),picCircle(50,50,4)],
+ BOOK:[picRect(24,18,52,64),picLine(50,18,50,82),picLine(30,30,44,30),picLine(30,42,44,42),picLine(56,30,70,30),picLine(56,42,70,42)]};
+
+/* ================= UI shell ================= */
+let inGame=false;
+const GAMES={}; // id -> {name,icon,desc,p:[min,max],payout,rules,render(R,C),init...}
+const UI={view:'home',curGame:null,
+ go(v){if(inGame&&v!==this.view){this.confirmQuit(()=>{inGame=false;clearTimers();Voice.leave();Net.leave(true);this._go(v);});return;}this._go(v);},
+ _go(v){clearTimers();this.view=v;document.querySelectorAll('#bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));this.render();window.scrollTo(0,0);},
+ confirmQuit(cb){const m=modal('<h3>✏️ Quit game?</h3><div class="muted">Are you sure you want to quit? Your progress in this game will be lost.</div><button class="btn danger" id="qYes">Yes, quit</button><button class="btn secondary" id="qNo">Keep playing</button>');
+  m.querySelector('#qYes').onclick=()=>{closeModal();cb();};m.querySelector('#qNo').onclick=()=>closeModal();},
+ render(){const v=$('#view');if(!v)return;
+  if(!Auth.user&&this.view!=='home'){this.view='home';}
+  if(this.view==='home')return this.home(v);
+  if(this.view==='profile')return this.profile(v);
+  if(this.view==='leaderboard')return this.leaderboard(v);
+  if(this.view==='chat')return this.chat(v);
+  if(this.view==='friends')return this.friends(v);
+  if(this.view==='game')return this.gameMode(v);
+  if(this.view==='lobby')return this.lobby(v);
+  if(this.view==='rooms')return this.rooms(v);
+ },
+ refresh(){const p=$('#pointsPill');if(p)p.textContent='⭐ '+Points.balance;},
+ home(v){
+  if(!Auth.user){v.innerHTML='<h2>✏️ Hush Music Paper Games</h2>'
+   +'<div class="paper"><h3>📓 Welcome to the notebook!</h3><p>15 classic pen &amp; paper games — Dots and Boxes, Hangman, Ghost, Word Search, Taboo and more — with <b>🤖 vs Computer</b>, <b>👥 Pass &amp; Play</b> and <b>🌐 Online PvP</b> rooms, friends, text chat, voice talk, points and a Top 50 leaderboard.</p></div>'
+   +'<div class="card"><h3>🔑 Log in</h3><label>'+(Backend.mode==='firebase'?'Email':'Username')+'</label><input id="liId" autocomplete="username"><label>Password</label><input id="liPw" type="password" autocomplete="current-password"><div class="err" id="liErr"></div><button class="btn" id="liBtn">Log in</button></div>'
+   +'<div class="card"><h3>✨ Sign up</h3><label>Username</label><input id="suName" maxlength="20">'+(Backend.mode==='firebase'?'<label>Email</label><input id="suEmail" type="email">':'')+'<label>Password</label><input id="suPw" type="password"><div class="err" id="suErr"></div><button class="btn secondary" id="suBtn">Create account (+'+START_POINTS+' ⭐)</button>'
+   +'<div class="muted">Demo mode: accounts live on this device only. Connect Firebase in Profile → Setup for real logins, friends &amp; online play.</div></div>';
+   $('#liBtn').onclick=async()=>{const e=await Auth.login($('#liId').value.trim(),$('#liPw').value);if(e)$('#liErr').textContent=e;else{Points.pullLocal&&Backend.mode!=='firebase'&&Points.pullLocal();UI.refresh();UI.render();toast('Welcome back, '+Auth.user.username+'!');}};
+   $('#suBtn').onclick=async()=>{const name=$('#suName').value.trim();if(name.length<2){$('#suErr').textContent='Username needs 2+ characters.';return;}
+    const e=await Auth.signup(name,Backend.mode==='firebase'?$('#suEmail').value.trim():name,$('#suPw').value);if(e)$('#suErr').textContent=e;else{UI.refresh();UI.render();toast('Account created — you got '+START_POINTS+' ⭐');}};
+   return;}
+  let cards='';for(const id in GAMES){const g=GAMES[id];cards+='<div class="gamecard" data-g="'+id+'"><div class="e">'+g.icon+'</div><div class="n">'+esc(g.name)+'</div><div class="t">'+esc(g.desc)+'</div></div>';}
+  v.innerHTML='<h2>✏️ Hush Music Paper Games</h2>'
+  +'<div class="card"><div class="row"><div class="grow"><b>'+esc(Auth.user.username)+'</b> <span class="muted">· code</span> <span class="codechip">'+esc(Auth.user.code||'')+'</span></div></div>'
+  +(Points.canClaimDaily()?'<button class="btn" id="dailyBtn">🎁 Claim daily bonus +'+DAILY_BONUS+' ⭐</button>':'<div class="ok">Daily bonus claimed ✓ — come back tomorrow.</div>')
+  +'<div class="muted">Every game: 🤖 vs Computer · 👥 Pass &amp; Play · 🌐 Online PvP room. Win PvC games to earn points.</div></div>'
+  +'<div class="grid">'+cards+'</div>';
+  const db=$('#dailyBtn');if(db)db.onclick=()=>{if(Points.claimDaily())UI.render();};
+  v.querySelectorAll('.gamecard').forEach(c=>c.onclick=()=>{Sound.click();this.curGame=c.dataset.g;this.go('game');});},
+ gameMode(v){const g=GAMES[this.curGame];if(!g)return this._go('home');const[pmin,pmax]=g.p;
+  v.innerHTML='<button class="btn secondary small" id="backBtn">← All games</button><h2>'+g.icon+' '+esc(g.name)+'</h2>'
+  +'<div class="paper"><h3>📖 How to play — official rules</h3><p>'+g.rules+'</p></div>'
+  +'<div class="card"><h3>How do you want to play?</h3>'
+  +'<button class="btn" data-m="pvc">🤖 Vs Computer</button>'
+  +'<button class="btn secondary" data-m="hotseat">👥 Pass &amp; Play ('+pmin+'–'+pmax+' players, one phone)</button>'
+  +'<button class="btn secondary" data-m="online">🌐 Online PvP (room code)</button>'
+  +'<button class="btn secondary" data-m="rooms">🚪 Browse open rooms</button></div>';
+  $('#backBtn').onclick=()=>this.go('home');
+  v.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{Sound.click();const m=b.dataset.m;if(m==='rooms'){this.go('rooms');}else startGame(this.curGame,m);});},
+ rooms(v){const g=GAMES[this.curGame];
+  const demo=DemoRooms.list(this.curGame);
+  v.innerHTML='<button class="btn secondary small" id="backBtn">← Back</button><h2>🚪 Open rooms — '+esc(g?g.name:'')+'</h2>'
+  +'<div class="card"><h3>On this device (demo)</h3>'+(demo.length?demo.map(r=>'<div class="row"><div class="grow">Room <b>'+r.code+'</b> · host '+esc(r.host)+' · '+esc(r.status)+'</div><button class="btn small" data-join="'+r.code+'">Join</button></div>').join(''):'<div class="muted">No open demo rooms. Create one from the game screen (Online PvP) — in demo mode it starts a Pass &amp; Play game and lists the room here.</div>')+'</div>'
+  +(Backend.mode==='firebase'?'<div class="card"><h3>Online</h3><div class="muted">Use “Online PvP” on the game screen to create or join a live room with a 4-digit code.</div></div>':'<div class="card"><div class="muted">Connect Firebase in Profile → Setup to see and join live online rooms (pg_rooms).</div></div>');
+  $('#backBtn').onclick=()=>this.go('game');
+  v.querySelectorAll('[data-join]').forEach(b=>b.onclick=()=>{const r=DemoRooms.join(b.dataset.join);if(r){toast('Joined room '+r.code+' — Pass & Play!');startGame(this.curGame,'hotseat');}});},
+ lobby(v){const g=GAMES[this.curGame];const[pmin,pmax]=g.p;
+  v.innerHTML='<button class="btn secondary small" id="backBtn">← Back</button><h2>🌐 Online: '+esc(g.name)+'</h2>'
+  +(Backend.mode==='firebase'
+   ?'<div class="card"><h3>Create a room</h3><label>Players</label><select id="seatN">'+Array.from({length:pmax-pmin+1},(_,i)=>'<option value="'+(pmin+i)+'">'+(pmin+i)+' players</option>').join('')+'</select><button class="btn" id="mkRoom">Create room</button></div>'
+    +'<div class="card"><h3>Join a room</h3><label>Room code</label><input id="joinCode" inputmode="numeric" placeholder="4-digit code"><button class="btn secondary" id="jnRoom">Join</button></div>'
+   :'<div class="card"><h3>Demo mode</h3><div class="muted">Firebase is not connected, so online rooms run on this device: creating a room lists it under “Browse open rooms” and starts a Pass &amp; Play game. Paste your Firebase keys in Profile → Setup for real online PvP.</div><button class="btn" id="mkDemo">Create demo room</button></div>');
+  $('#backBtn').onclick=()=>this.go('game');
+  const mk=$('#mkRoom');if(mk)mk.onclick=async()=>{const seats=parseInt($('#seatN').value);const code=await Net.create(UI.curGame,seats);if(code)watchRoom(UI.curGame);};
+  const jn=$('#jnRoom');if(jn)jn.onclick=async()=>{const c=await Net.join($('#joinCode').value);if(c)watchRoom(UI.curGame);};
+  const md=$('#mkDemo');if(md)md.onclick=()=>{const code=DemoRooms.create(UI.curGame);toast('Demo room '+code+' created');startGame(UI.curGame,'hotseat');};},
+ profile(v){const fb=Backend.mode==='firebase';const st=Points.wins;
+  let stats='';for(const id in GAMES){const s=st[id]||{w:0,l:0,t:0};const tot=s.w+s.l+s.t;const wr=tot?Math.round(100*s.w/tot):0;
+   stats+='<tr><td>'+GAMES[id].icon+' '+esc(GAMES[id].name)+'</td><td>'+s.w+'</td><td>'+s.l+'</td><td>'+s.t+'</td><td>'+(tot?wr+'%':'—')+'</td></tr>';}
+  v.innerHTML='<h2>👤 Profile</h2><div class="card"><h3>'+esc(Auth.user.username)+'</h3>'
+  +'<div>Your player code: <span class="codechip">'+esc(Auth.user.code||'')+'</span></div>'
+  +'<div class="muted" style="margin-top:6px">Points: <b>⭐ '+Points.balance+'</b> · Total wins: <b>'+Points.totalWins()+'</b> · Mode: <b>'+(fb?'Online (Firebase)':'Demo (this device)')+'</b></div>'
+  +(Points.canClaimDaily()?'<button class="btn" id="dailyBtn2">🎁 Claim daily bonus +'+DAILY_BONUS+' ⭐</button>':'')
+  +'<button class="btn secondary" id="renameBtn">✏️ Change username</button>'
+  +'<button class="btn secondary" id="loBtn">Log out</button>'
+  +'<button class="btn danger" id="eraseBtn">🗑️ Erase account</button></div>'
+  +'<div class="card"><h3>📊 Your game record</h3><table class="lb"><tr><th>Game</th><th>W</th><th>L</th><th>T</th><th>Win %</th></tr>'+stats+'</table></div>'
+  +'<div class="card"><h3>⚙️ Setup — unlock online play</h3><div id="setupStatus">'+(fb?'<div class="ok">Firebase connected ✓ — online PvP, friends, shared Top 50 and chats are live (pg_* paths).</div>':'<div class="msg">Demo mode. Paste your free Firebase web config JSON to go online — the same project as your other Hush Music hubs works.</div>')+'</div>'
+  +'<label>Firebase config (JSON)</label><textarea id="fbCfg" rows="5" placeholder=\'{"apiKey":"…","authDomain":"…","databaseURL":"…","projectId":"…","appId":"…"}\'></textarea>'
+  +'<button class="btn" id="saveFb">Save Firebase keys &amp; reload</button>'
+  +'<label>LiveKit token-worker URL (voice talk)</label><input id="workerIn" placeholder="https://your-worker.your-name.workers.dev" value="'+esc(store.get('voice_worker',''))+'">'
+  +'<label>LiveKit server URL (only if your worker does not return one)</label><input id="lkIn" placeholder="wss://your-project.livekit.cloud" value="'+esc(store.get('livekit_url',''))+'">'
+  +'<button class="btn secondary" id="saveWorker">Save voice settings</button>'
+  +'<div class="muted">The worker holds the LiveKit API secret on Cloudflare — never paste any API secret into this app. Voice join fetches: GET workerUrl?room=&lt;room&gt;&amp;identity=&lt;username&gt; and expects JSON {token, url} (or a raw token plus the server URL above).</div></div>';
+  const db=$('#dailyBtn2');if(db)db.onclick=()=>{if(Points.claimDaily())UI.render();};
+  $('#loBtn').onclick=()=>Auth.logout();
+  $('#eraseBtn').onclick=()=>{const m=modal('<h3>🗑️ Erase account?</h3><div class="muted">This deletes your account, points and stats. It cannot be undone.</div><button class="btn danger" id="eYes">Erase everything</button><button class="btn secondary" id="eNo">Cancel</button>');
+   m.querySelector('#eYes').onclick=()=>{closeModal();Auth.erase();};m.querySelector('#eNo').onclick=()=>closeModal();};
+  $('#renameBtn').onclick=()=>{const m=modal('<h3>✏️ Change username</h3><input id="rnIn" value="'+esc(Auth.user.username)+'" maxlength="20"><button class="btn" id="rnGo">Save</button>');
+   m.querySelector('#rnGo').onclick=()=>{const n=m.querySelector('#rnIn').value.trim();if(n.length<2)return;Auth.user.username=n;
+    if(Backend.mode==='firebase')Backend.db.ref('pg_users/'+Auth.user.uid).update({username:n}).catch(()=>{});
+    else{const all=Auth.accounts();if(all[Auth.user.uid]){all[Auth.user.uid].username=n;Auth.saveAccounts(all);}}
+    closeModal();UI.render();toast('Username updated');};};
+  $('#saveFb').onclick=()=>{try{const j=JSON.parse($('#fbCfg').value);store.set('fb_config',j);toast('Saved — reloading…');setTimeout(()=>location.reload(),600);}catch(e){toast('That is not valid JSON');}};
+  $('#saveWorker').onclick=()=>{store.set('voice_worker',$('#workerIn').value.trim());store.set('livekit_url',$('#lkIn').value.trim());toast('Voice settings saved');};},
+ async leaderboard(v){v.innerHTML='<h2>🏆 Top 50</h2><div class="card" id="lbBox"><div class="muted">Loading…</div></div>';const box=$('#lbBox');
+  if(Backend.mode!=='firebase'){const rows=seededLeaderboard();
+   box.innerHTML='<table class="lb"><tr><th>#</th><th>Player</th><th>Code</th><th>⭐</th><th>Wins</th></tr>'+rows.map((r,i)=>'<tr class="'+(r.me?'me':'')+'"><td>'+(i+1)+'</td><td>'+esc(r.username)+'</td><td>'+(r.me?esc(Auth.user.code||''):esc(botCode(BOT_NAMES.indexOf(r.username))))+'</td><td>'+r.points+'</td><td>'+r.wins+'</td></tr>').join('')+'</table><div class="muted">Demo board: seeded rivals + you. Connect Firebase for the shared Top 50 (pg_leaderboard / pg_users).</div>';return;}
+  try{const s=await Backend.db.ref('pg_users').orderByChild('points').limitToLast(50).get();const rows=[];s.forEach(c=>{const d=c.val();rows.push({username:d.username,points:d.points||0,wins:d.wins?Object.values(d.wins).reduce((a,g)=>a+(g.w||0),0):0,code:d.code||'',me:Auth.user&&d.username===Auth.user.username});});
+   rows.sort((a,b)=>b.points-a.points);
+   box.innerHTML='<table class="lb"><tr><th>#</th><th>Player</th><th>Code</th><th>⭐</th><th>Wins</th></tr>'+rows.map((r,i)=>'<tr class="'+(r.me?'me':'')+'"><td>'+(i+1)+'</td><td>'+esc(r.username||'?')+'</td><td>'+esc(r.code)+'</td><td>'+r.points+'</td><td>'+r.wins+'</td></tr>').join('')+'</table>';
+  }catch(e){box.innerHTML='<div class="err">Could not load the leaderboard.</div>';}},
+ chat(v){v.innerHTML='<h2>💬 Lobby chat</h2>'+voiceBarHTML('paper-lobby')+'<div class="card"><h3>Everyone</h3>'+chatBoxHTML('lobbyChat')+'<div class="muted">Be kind. '+(Backend.mode==='firebase'?'Messages are shared with everyone in the hub (pg_chats/lobby).':'Demo mode: messages stay on this device.')+'</div></div>';
+  wireVoice('paper-lobby');wireChat('lobbyChat','lobby');},
+ friends(v){
+  if(Backend.mode==='firebase'){v.innerHTML='<h2>👥 Friends</h2><div class="card" id="fbFriendsBox"><div class="muted">Loading…</div></div><div class="card"><h3>➕ Add by player code</h3><input id="frCode" placeholder="e.g. K7P2QX" maxlength="8"><div class="err" id="frErr"></div><div class="ok" id="frOk"></div><button class="btn" id="frAdd">Send friend request</button></div>';
+   Friends.fbList($('#fbFriendsBox'));
+   $('#frAdd').onclick=async()=>{const msg=await Friends.addByCode($('#frCode').value);if(msg.startsWith('Friend request')){$('#frOk').textContent=msg;$('#frErr').textContent='';}else{$('#frErr').textContent=msg;$('#frOk').textContent='';}Friends.fbList($('#fbFriendsBox'));};
+   return;}
+  Friends.seedRequests();
+  const fr=Friends.list(),rq=Friends.requests(),a=Friends.local(),sent=(a&&a.sent)||[];
+  v.innerHTML='<h2>👥 Friends</h2>'
+  +'<div class="card"><h3>📨 Friend requests</h3>'+(rq.length?rq.map(r=>'<div class="row"><div class="grow"><b>'+esc(r.username)+'</b> <span class="muted">('+esc(r.code)+')</span> wants to be friends</div><button class="btn small" data-acc="'+esc(r.code)+'">Accept</button><button class="btn small secondary" data-dec="'+esc(r.code)+'">Decline</button></div>').join(''):'<div class="muted">No waiting requests.</div>')
+  +(sent.length?'<div class="muted" style="margin-top:8px">Sent, waiting: '+sent.map(s=>esc(s.username)).join(', ')+'</div>':'')+'</div>'
+  +'<div class="card"><h3>👥 Your friends ('+fr.length+')</h3>'+(fr.length?fr.map(f=>'<div class="row"><div class="grow"><b>'+esc(f.username)+'</b> <span class="muted">('+esc(f.code)+')</span></div><span class="ok">● friend</span></div>').join(''):'<div class="muted">No friends yet — add one by player code below.</div>')+'</div>'
+  +'<div class="card"><h3>➕ Add by player code</h3><div class="muted">Your code: <span class="codechip">'+esc(Auth.user.code||'')+'</span><br>Demo mode: friends on this device get the request in their inbox when they log in. The seeded Top-50 rivals also accept requests — find their codes on the Top 50 board. With Firebase connected, requests work across devices (pg_codes / pg_requests).</div><input id="frCode" placeholder="Player code" maxlength="8"><div class="err" id="frErr"></div><div class="ok" id="frOk"></div><button class="btn" id="frAdd">Send friend request</button></div>';
+  v.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{const r=rq.find(x=>x.code===b.dataset.acc);if(r)Friends.accept(r);UI.render();toast('Friend added 🎉');});
+  v.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{const r=rq.find(x=>x.code===b.dataset.dec);if(r)Friends.decline(r);UI.render();});
+  $('#frAdd').onclick=async()=>{const msg=await Friends.addByCode($('#frCode').value);if(msg.startsWith('Friend request')){$('#frOk').textContent=msg;$('#frErr').textContent='';UI.render();}else{$('#frErr').textContent=msg;$('#frOk').textContent='';}};},
+ renderFbFriends(box){const d=UI._fbFriends||{rows:[],reqs:[]};
+  box.innerHTML='<h3>📨 Requests</h3>'+(d.reqs.length?d.reqs.map(r=>'<div class="row"><div class="grow"><b>'+esc(r.username)+'</b></div><button class="btn small" data-facc="'+esc(r.uid)+'">Accept</button><button class="btn small secondary" data-fdec="'+esc(r.uid)+'">Decline</button></div>').join(''):'<div class="muted">No waiting requests.</div>')
+  +'<h3>👥 Your friends ('+d.rows.length+')</h3>'+(d.rows.length?d.rows.map(f=>'<div><b>'+esc(f.username)+'</b> <span class="muted">('+esc(f.code)+')</span></div>').join(''):'<div class="muted">No friends yet.</div>');
+  box.querySelectorAll('[data-facc]').forEach(b=>b.onclick=async()=>{const ruid=b.dataset.facc;const m={};m['pg_friends/'+Auth.user.uid+'/'+ruid]=true;m['pg_friends/'+ruid+'/'+Auth.user.uid]=true;m['pg_requests/'+Auth.user.uid+'/'+ruid]=null;await Backend.db.ref().update(m);Friends.fbList(box);});
+  box.querySelectorAll('[data-fdec]').forEach(b=>b.onclick=async()=>{await Backend.db.ref('pg_requests/'+Auth.user.uid+'/'+b.dataset.fdec).remove();Friends.fbList(box);});}
+};
+
+/* ================= game context / flow ================= */
+function makeCtx(gameId,mode,names){
+ const C={gameId,mode,names,S:null,isNet:mode==='online',
+  seatName(i){return this.isNet?Net.seatName(i):(this.names[i]||('Player '+(i+1)));},
+  cur(){return this.S?this.S.turn%this.names.length:0;},
+  mine(){if(!this.S||this.S.over)return false;if(this.isNet)return this.cur()===Net.mySeat();if(this.mode==='pvc')return this.cur()===0;return true;},
+  update(fn,quiet){fn(this.S);Sound.click();if(this.isNet)Net.push({state:this.S,turn:this.S.turn,status:this.S.over?'over':'playing'});else if(!quiet)this.rerender();},
+  rerender(){if(window._C===this)GAMES[this.gameId].render($('#view'),this);},
+  finish(winner,msg,custom){ // winner: seat idx | -1 draw | 'score' handled by game via custom
+   this.S.over=true;inGame=false;const g=GAMES[this.gameId];
+   let result=null,pts=0;const meSeat=this.isNet?Net.mySeat():0;
+   if(custom&&custom.result){result=custom.result;pts=custom.pts||0;}
+   else if(winner===-1){result='t';}
+   else if(this.mode==='hotseat'){result=null;}
+   else{result=winner===meSeat?'w':'l';}
+   if(result==='w'){pts=pts||g.payout||50;Points.add(pts);Sound.win();}
+   else if(result==='l'){Sound.lose();}
+   else if(custom&&custom.pts){pts=custom.pts;Points.add(pts);}
+   if(result&&(this.mode!=='hotseat'))Points.record(this.gameId,result);
+   if(this.isNet)Net.push({state:this.S,turn:this.S.turn,status:'over'});
+   const R=$('#view');clearTimers();
+   R.innerHTML='<div class="card center"><div style="font-size:56px">'+(result==='t'?'🤝':result==='l'?'😞':'🏆')+'</div>'
+   +'<h2>'+(custom&&custom.title?esc(custom.title):result==='t'?'Draw!':winner>=0?esc(this.seatName(winner))+' wins!':'Game over')+'</h2>'
+   +(custom&&custom.body?custom.body:'<div class="msg">'+esc(msg||'')+'</div>')
+   +(result?(pts?'<div class="ok">+'+pts+' ⭐ points</div>':'')+'<div class="muted">Result recorded: '+(result==='w'?'Win':result==='l'?'Loss':'Tie')+'</div>':'')
+   +'<button class="btn" id="againBtn">Play again</button><button class="btn secondary" id="hubBtn">All games</button></div>';
+   $('#againBtn').onclick=()=>{if(this.isNet)Net.leave(true);startGame(this.gameId,this.mode);};
+   $('#hubBtn').onclick=()=>{if(this.isNet)Net.leave(true);UI._go('home');};}};
+ return C;
+}
+function gameChrome(C,title,inner){
+ return '<div class="row"><button class="btn secondary small" id="gBack">← Quit</button><button class="btn secondary small" id="gHow">📖 How to play</button><span class="grow"></span><span class="muted">'+esc(C.mode==='pvc'?'🤖 vs Computer':C.mode==='online'?'🌐 Online':'👥 Pass & Play')+'</span></div>'
+ +'<h2>'+title+'</h2>'+voiceBarHTML('paper-'+C.gameId+(Net.room?('-'+Net.room.code):''))+'<div id="gameBody">'+inner+'</div>'
+ +'<div class="card"><h3>💬 Game chat</h3>'+chatBoxHTML('gameChat')+'</div>';
+}
+function wireChrome(C){
+ $('#gBack').onclick=()=>{UI.confirmQuit(()=>{inGame=false;clearTimers();Voice.leave();if(C.isNet)Net.leave(true);window._C=null;UI._go('game');});};
+ $('#gHow').onclick=()=>{const g=GAMES[C.gameId];const m=modal('<h3>'+g.icon+' '+esc(g.name)+' — official rules</h3><div style="font-size:14px;line-height:1.5">'+g.rules+'</div><button class="btn" id="hOk">Got it</button>');m.querySelector('#hOk').onclick=()=>closeModal();};
+ wireVoice('paper-'+C.gameId+(Net.room?('-'+Net.room.code):''));
+ wireChat('gameChat',Net.room?('room_'+Net.room.code):('game_'+C.gameId));
+}
+function turnBanner(C){const t=C.S&&!C.S.over?(C.mine()?'🟢 Your move — '+esc(C.seatName(C.cur())):'⏳ '+esc(C.seatName(C.cur()))+' to move'):'';return t?'<div class="turn-banner">'+t+'</div>':'';}
+function cpuDelay(fn,ms){later(ms||700,()=>{if(window._C&&!window._C.S.over)fn();});}
+function maybeCpu(C){if(C.mode==='pvc'&&!C.isNet&&C.S&&!C.S.over&&C.cur()===1)cpuDelay(()=>{if(window._C===C&&!C.S.over&&GAMES[C.gameId].cpu)GAMES[C.gameId].cpu(C);});}
+function passCover(C,next){C._cover=true;const R=$('#view');
+ R.innerHTML='<div class="card center" style="margin-top:50px"><div style="font-size:56px">🙈</div><h2>Pass to '+esc(C.seatName(next))+'</h2><div class="muted">No peeking, '+esc(C.seatName(1-next))+'!</div><button class="btn" id="readyBtn">I\'m '+esc(C.seatName(next))+' — ready</button></div>';
+ $('#readyBtn').onclick=()=>{C._cover=false;C.rerender();};}
+function stdInit(id,def){
+ def.init=function(C){C.S=def.newState(C);window._C=C;inGame=true;
+  if(C.isNet)Net.push({state:C.S,turn:C.S.turn,status:'playing'});
+  def.render($('#view'),C);};
+ def.onJoin=function(C){window._C=C;inGame=true;def.render($('#view'),C);};
+ GAMES[id]=Object.assign({id},def);
+}
+function startGame(gameId,mode){
+ const g=GAMES[gameId];
+ if(mode==='online'&&Backend.mode==='firebase'){UI.view='lobby';UI._go('lobby');return;}
+ if(mode==='online'){UI.view='lobby';UI._go('lobby');return;}
+ let names;
+ if(mode==='pvc')names=[Auth.user.username,'Computer 🤖'];
+ else names=['Player 1','Player 2'];
+ if(g.p[1]>2&&mode==='hotseat'){
+  const m=modal('<h3>👥 How many players?</h3>'+Array.from({length:g.p[1]-g.p[0]+1},(_,i)=>'<button class="btn secondary" data-n="'+(g.p[0]+i)+'">'+(g.p[0]+i)+' players</button>').join(''));
+  m.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{closeModal();launch(gameId,mode,Array.from({length:+b.dataset.n},(_,i)=>'Player '+(i+1)));});
+  return;}
+ launch(gameId,mode,names);
+}
+function launch(gameId,mode,names){const C=makeCtx(gameId,mode,names);GAMES[gameId].init(C);}
+function watchRoom(gameId){
+ const v=$('#view');inGame=false;
+ v.innerHTML='<div class="card center"><h2>🌐 Room '+Net.room.code+'</h2><div class="muted" id="wMsg">Waiting for players… '+Net.room.seats.length+'/'+Net.room.seatsNeeded+'</div><div class="muted">Share the code with your friend.</div><button class="btn secondary" id="lvBtn">Leave</button></div>'+voiceBarHTML('paper-room-'+Net.room.code);
+ wireVoice('paper-room-'+Net.room.code);
+ $('#lvBtn').onclick=()=>{Net.leave();UI._go('game');};
+ Net.onUpdate(room=>{const wm=$('#wMsg');if(wm)wm.textContent='Waiting for players… '+room.seats.length+'/'+room.seatsNeeded;
+  if(room.status==='waiting'&&room.seats.length>=room.seatsNeeded&&Net.isHost()){
+   const names=room.seats.map((u,i)=>(room.names&&room.names[u])||('Player '+(i+1)));
+   launch(gameId,'online',names);return;}
+  if(room.status==='playing'){
+   if(!window._C||window._C.gameId!==gameId||window._C.mode!=='online'){
+    const names=room.seats.map((u,i)=>(room.names&&room.names[u])||('Player '+(i+1)));
+    const C=makeCtx(gameId,'online',names);C.S=room.state;GAMES[gameId].onJoin(C);return;}
+   const C=window._C;
+   if(JSON.stringify(C.S)!==JSON.stringify(room.state)){C.S=room.state;C.rerender();}
+  }});
+}
+
+/* ================= game render helper ================= */
+function bodyHTML(C,title,html){let gb=document.getElementById('gameBody');
+ if(!gb){$('#view').innerHTML=gameChrome(C,title,'');wireChrome(C);gb=document.getElementById('gameBody');}
+ gb.innerHTML=html;}
+function howBtn(){return '';} // How-to lives in the chrome (📖 How to play)
+
+/* ================= 1. DOTS AND BOXES ================= */
+stdInit('dots',{name:'Dots and Boxes',icon:'🔲✏️',desc:'Claim the most boxes',p:[2,2],payout:PAYOUTS.dots,
+ rules:'Players take turns drawing ONE line between two dots on a 4×4 grid of boxes. If your line completes the 4th side of a box, the box is yours — and you MUST take another turn. When every box is claimed, the player with the most boxes wins. Official rules, pencil-and-paper style.',
+ newState(){return Logic.dotsNew(4);},
+ render(R,C){const S=C.S,n=S.n;
+  let cells='';const cols=[];for(let i=0;i<2*n+1;i++)cols.push(i%2? '44px':'14px');
+  for(let r=0;r<2*n+1;r++)for(let c=0;c<2*n+1;c++){
+   if(r%2===0&&c%2===0)cells+='<div class="dotcell"><i></i></div>';
+   else if(r%2===0){const er=r/2,ec=(c-1)/2,t=S.h[er*n+ec];cells+='<button class="edgebtn '+(t?'t'+(t-1):'')+'" data-k="h" data-r="'+er+'" data-c="'+ec+'" style="height:10px;width:100%" '+(t||!C.mine()?'disabled':'')+'></button>';}
+   else if(c%2===0){const er=(r-1)/2,ec=c/2,t=S.v[er*(n+1)+ec];cells+='<button class="edgebtn '+(t?'t'+(t-1):'')+'" data-k="v" data-r="'+er+'" data-c="'+ec+'" style="width:10px;height:100%;justify-self:center" '+(t||!C.mine()?'disabled':'')+'></button>';}
+   else{const br=(r-1)/2,bc=(c-1)/2,o=S.boxes[br*n+bc];cells+='<div class="boxcell" style="background:'+(o?(o===1?'rgba(88,166,255,.35)':'rgba(224,101,79,.35)'):'transparent')+'">'+(o?(o===1?'✕':'◯'):'')+'</div>';}}
+  bodyHTML(C,'🔲 Dots and Boxes',turnBanner(C)
+   +'<div class="paper"><div class="row"><span class="chip">✕ '+esc(C.seatName(0))+': '+S.scores[0]+'</span><span class="chip">◯ '+esc(C.seatName(1))+': '+S.scores[1]+'</span></div>'
+   +'<div style="display:grid;grid-template-columns:'+cols.join(' ')+';gap:1px;justify-content:center;margin-top:10px">'+cells+'</div>'
+   +'<p class="muted">Tap a gap between dots to draw your line. Complete a box to go again!</p></div>');
+  const gb=document.getElementById('gameBody');
+  gb.querySelectorAll('.edgebtn').forEach(b=>b.onclick=()=>{if(!C.mine())return;const seat=C.cur();
+   C.update(s=>{const res=Logic.dotsApply(s,b.dataset.k,+b.dataset.r,+b.dataset.c,seat);if(res.ok&&!res.extra)s.turn++;});
+   afterDots(C);});},
+ cpu(C){const mv=Logic.dotsBotMove(C.S);if(!mv)return;const seat=C.cur();
+  C.update(s=>{const res=Logic.dotsApply(s,mv[0],mv[1],mv[2],seat);if(res.ok&&!res.extra)s.turn++;},true);C.rerender();afterDots(C);}});
+function afterDots(C){const S=C.S;if(S.over){const w=S.scores[0]===S.scores[1]?-1:(S.scores[0]>S.scores[1]?0:1);
+  later(400,()=>C.finish(w,'Final boxes — '+C.seatName(0)+': '+S.scores[0]+' · '+C.seatName(1)+': '+S.scores[1]+'.'));}
+ else maybeCpu(C);}
+
+/* ================= 2. TIC-TAC-TOE ================= */
+stdInit('ttt',{name:'Tic-Tac-Toe',icon:'❌⭕',desc:'Three in a row',p:[2,2],payout:PAYOUTS.ttt,
+ rules:'X goes first. Players take turns marking one square of the 3×3 grid. First to get three in a row — across, down or diagonally — wins. If all nine squares fill with no line, it is a draw (a "cat\'s game").',
+ newState(){return {turn:0,board:Array(9).fill(''),over:false};},
+ render(R,C){const S=C.S;
+  bodyHTML(C,'❌ Tic-Tac-Toe',turnBanner(C)+'<div class="paper"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:300px;margin:10px auto">'
+  +S.board.map((cell,i)=>'<div class="tttcell '+(cell==='O'?'o':'')+'" data-i="'+i+'">'+cell+'</div>').join('')+'</div>'
+  +'<p class="muted center">'+esc(C.seatName(0))+' is ❌ · '+esc(C.seatName(1))+' is ⭕</p></div>');
+  document.getElementById('gameBody').querySelectorAll('.tttcell').forEach(el=>el.onclick=()=>{const i=+el.dataset.i;if(S.board[i]||!C.mine())return;
+   C.update(s=>{s.board[i]=C.cur()===0?'X':'O';s.turn++;});afterTTT(C);});},
+ cpu(C){const i=Logic.tttBest(C.S.board.slice(),'O','X');if(i<0)return;
+  C.update(s=>{s.board[i]='O';s.turn++;},true);C.rerender();afterTTT(C);}});
+function afterTTT(C){const w=Logic.tttWin(C.S.board);
+ if(w==='X')return later(350,()=>C.finish(0,'Three in a row for X!'));
+ if(w==='O')return later(350,()=>C.finish(1,'Three in a row for O!'));
+ if(w==='draw')return later(350,()=>C.finish(-1,'A cat\'s game — nobody got three in a row.'));
+ maybeCpu(C);}
+
+/* ================= 3. HANGMAN ================= */
+const HANG_WORDS=GHOST_WORDS.filter(w=>w.length>=5&&w.length<=8).map(w=>w.toUpperCase());
+stdInit('hangman',{name:'Hangman',icon:'🪢✏️',desc:'Guess the word, save the stickman',p:[1,2],payout:PAYOUTS.hangman,
+ rules:'One player thinks of a word; the other guesses letters one at a time. A correct letter fills in every blank where it belongs. A wrong letter draws one more piece of the gallows and the stick figure. Official version: SIX wrong guesses and the figure is complete — the guesser loses. Guess the whole word first to win.',
+ newState(){return {turn:0,word:pickA(HANG_WORDS),guessed:[],over:false};},
+ render(R,C){const S=C.S;const wrong=Logic.hangWrong(S.word,S.guessed);
+  const parts=['<line x1="20" y1="140" x2="60" y2="140" stroke="#22304a" stroke-width="4"/><line x1="40" y1="140" x2="40" y2="20" stroke="#22304a" stroke-width="4"/>',
+   '<line x1="40" y1="20" x2="105" y2="20" stroke="#22304a" stroke-width="4"/><line x1="40" y1="35" x2="55" y2="20" stroke="#22304a" stroke-width="3"/>',
+   '<line x1="105" y1="20" x2="105" y2="42" stroke="#22304a" stroke-width="3"/>',
+   '<circle cx="105" cy="54" r="12" fill="none" stroke="#c0392b" stroke-width="3"/>',
+   '<line x1="105" y1="66" x2="105" y2="100" stroke="#c0392b" stroke-width="3"/>',
+   '<line x1="105" y1="76" x2="90" y2="90" stroke="#c0392b" stroke-width="3"/><line x1="105" y1="76" x2="120" y2="90" stroke="#c0392b" stroke-width="3"/><line x1="105" y1="100" x2="92" y2="118" stroke="#c0392b" stroke-width="3"/><line x1="105" y1="100" x2="118" y2="118" stroke="#c0392b" stroke-width="3"/>'];
+  let svg='<svg viewBox="0 0 140 150" style="width:170px;display:block;margin:0 auto">';
+  for(let i=0;i<wrong&&i<parts.length;i++)svg+=parts[i];svg+='</svg>';
+  const disp=S.word.split('').map(ch=>S.guessed.includes(ch)?ch:'_').join(' ');
+  let kb='';'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(L=>{const used=S.guessed.includes(L);const bad=used&&!S.word.includes(L);const good=used&&S.word.includes(L);
+   kb+='<button class="kbtn '+(bad?'bad':good?'good':'')+'" data-l="'+L+'" '+(used||!C.mine()?'disabled':'')+'>'+L+'</button>';});
+  bodyHTML(C,'🪢 Hangman',turnBanner(C)+'<div class="paper">'+svg
+   +'<div class="frag" style="font-size:26px">'+disp+'</div>'
+   +'<p class="center"><b>Wrong guesses: '+wrong+' / 6</b>'+(S.guessed.length?' · Guessed: '+S.guessed.join(', '):'')+'</p>'
+   +'<div class="center">'+kb+'</div></div>');
+  document.getElementById('gameBody').querySelectorAll('.kbtn').forEach(b=>b.onclick=()=>{
+   C.update(s=>{s.guessed.push(b.dataset.l);if(C.mode!=='pvc')s.turn++;});afterHang(C);});},
+ cpu(C){const order='ETAOINSHRDLUCMFYWGPBVKXQJZ';const S=C.S;
+  const L=order.split('').find(l=>!S.guessed.includes(l))||'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l=>!S.guessed.includes(l));
+  if(!L)return;C.update(s=>{s.guessed.push(L);s.turn++;},true);C.rerender();afterHang(C);}});
+function afterHang(C){const S=C.S;const wrong=Logic.hangWrong(S.word,S.guessed);
+ const lastSeat=C.mode==='pvc'?0:(S.turn-1)%C.names.length; // whoever guessed last (PvC: you are the guesser, the computer keeps the word)
+ if(Logic.hangRevealed(S.word,S.guessed))return later(350,()=>C.finish(lastSeat,C.seatName(lastSeat)+' guessed the last letter — the word was '+S.word+'!'));
+ if(wrong>=6)return later(350,()=>C.finish(1-lastSeat,C.seatName(lastSeat)+' made the 6th wrong guess. The word was '+S.word+'.'));
+ maybeCpu(C);}
+
+/* ================= 4. SPROUTS ================= */
+function segInt(p1,p2,p3,p4){const d=(p2[0]-p1[0])*(p4[1]-p3[1])-(p2[1]-p1[1])*(p4[0]-p3[0]);if(!d)return false;
+ const t=((p3[0]-p1[0])*(p4[1]-p3[1])-(p3[1]-p1[1])*(p4[0]-p3[0]))/d;const u=((p3[0]-p1[0])*(p2[1]-p1[1])-(p3[1]-p1[1])*(p2[0]-p1[0]))/d;
+ return t>0.02&&t<0.98&&u>0.02&&u<0.98;}
+function sproutsMid(a,b){const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if(a===b)return {x:Math.min(285,a.x+42),y:Math.max(15,a.y-42)};
+ const dx=b.x-a.x,dy=b.y-a.y;const len=Math.hypot(dx,dy)||1;const off=Math.min(26,len/4);
+ return {x:mx-dy/len*off,y:my+dx/len*off};}
+function sproutsCrosses(S,a,b,mid){const A=S.dots[a],B=S.dots[b];const segs=[[ [A.x,A.y],[mid.x,mid.y] ],[ [mid.x,mid.y],[B.x,B.y] ]];
+ for(const e of S.edges){const P=S.dots[e.a],Q=S.dots[e.b],M={x:e.mx,y:e.my};const es=[[[P.x,P.y],[M.x,M.y]],[[M.x,M.y],[Q.x,Q.y]]];
+  for(const s1 of segs)for(const s2 of es){
+   const shared=(s1[0][0]===s2[0][0]&&s1[0][1]===s2[0][1])||(s1[0][0]===s2[1][0]&&s1[0][1]===s2[1][1])||(s1[1][0]===s2[0][0]&&s1[1][1]===s2[0][1])||(s1[1][0]===s2[1][0]&&s1[1][1]===s2[1][1]);
+   if(shared)continue;if(segInt(s1[0],s1[1],s2[0],s2[1]))return true;}}
+ return false;}
+function sproutsLegal(S){const L=[];for(let a=0;a<S.dots.length;a++)for(let b=a;b<S.dots.length;b++){
+ if(a===b){if(S.dots[a].deg>1)continue;}else if(S.dots[a].deg>=3||S.dots[b].deg>=3)continue;
+ const mid=sproutsMid(S.dots[a],S.dots[b]);if(sproutsCrosses(S,a,b,mid))continue;L.push([a,b,mid]);}return L;}
+function sproutsApply(S,a,b,mid){S.edges.push({a:a,b:b,mx:mid.x,my:mid.y,by:S.turn%2});
+ S.dots.push({x:mid.x,y:mid.y,deg:2});if(a===b)S.dots[a].deg+=2;else{S.dots[a].deg++;S.dots[b].deg++;}S.turn++;}
+stdInit('sprouts',{name:'Sprouts',icon:'🌱✏️',desc:'Connect dots, add a dot, last move wins',p:[2,2],payout:PAYOUTS.sprouts,
+ rules:'Start with 3 dots. On your turn, draw a line connecting two dots (or a loop back to the same dot) and place a NEW dot somewhere on your line. No dot may have more than 3 lines touching it (a loop counts as 2). Lines may not cross. The player who cannot make a legal move loses. (This hub draws smooth 2-part lines through the new dot instead of freehand curves — see README.)',
+ newState(){return {turn:0,over:false,sel:-1,dots:[{x:60,y:130,deg:0},{x:240,y:130,deg:0},{x:150,y:45,deg:0}],edges:[]};},
+ render(R,C){const S=C.S;
+  let paths='';S.edges.forEach(e=>{const A=S.dots[e.a],B=S.dots[e.b];
+   paths+='<path d="M'+A.x+','+A.y+' Q'+e.mx+','+e.my+' '+e.mx+','+e.my+' T'+B.x+','+B.y+'" fill="none" stroke="'+(e.by===0?'#2470c9':'#c0392b')+'" stroke-width="3" stroke-linecap="round"/>';});
+  if(S.sel>=0&&S.dots[S.sel]){const d=S.dots[S.sel];paths+='<circle cx="'+d.x+'" cy="'+d.y+'" r="14" fill="none" stroke="#d9a726" stroke-width="3"/>';}
+  let dots='';S.dots.forEach((d,i)=>{dots+='<g data-dot="'+i+'" style="cursor:pointer"><circle cx="'+d.x+'" cy="'+d.y+'" r="10" fill="'+(d.deg>=3?'#bbb':'#fffdf4')+'" stroke="#22304a" stroke-width="2.5"/><text x="'+d.x+'" y="'+(d.y+4)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#22304a">'+(3-d.deg)+'</text></g>';});
+  bodyHTML(C,'🌱 Sprouts',turnBanner(C)+'<div class="paper"><svg viewBox="0 0 300 260" class="paperCanvas" id="sprSvg">'+paths+dots+'</svg>'
+  +'<p class="muted">Tap a dot, then tap a second dot (or the same dot for a loop). Numbers = lives left on each dot. '+(C.mine()?(S.sel>=0?'First dot picked — now tap the second.':'Your move.'):'')+'</p></div>');
+  const gb=document.getElementById('gameBody');
+  gb.querySelectorAll('[data-dot]').forEach(g=>g.onclick=()=>{if(!C.mine()||S.over)return;const i=+g.dataset.dot;
+   if(S.sel<0){C.update(s=>{s.sel=i;},true);C.rerender();return;}
+   const a=S.sel,b=i;const mid=sproutsMid(S.dots[a],S.dots[b]);
+   const legal=sproutsLegal(S).some(([x,y])=>x===Math.min(a,b)&&y===Math.max(a,b));
+   if(!legal){toast('That move is not legal (dot full or line would cross).');C.update(s=>{s.sel=-1;},true);C.rerender();return;}
+   C.update(s=>{s.sel=-1;sproutsApply(s,Math.min(a,b),Math.max(a,b),mid);});afterSprouts(C);});
+  if(C.mine()&&sproutsLegal(S).length===0&&!S.over){later(300,()=>C.finish(1-C.cur(),C.seatName(C.cur())+' has no legal move left.'));}},
+ cpu(C){const L=sproutsLegal(C.S);if(!L.length)return;
+  const [a,b,mid]=pickA(L);C.update(s=>{sproutsApply(s,a,b,mid);},true);C.rerender();afterSprouts(C);}});
+function afterSprouts(C){if(C.S.over)return;
+ if(sproutsLegal(C.S).length===0){later(300,()=>C.finish(1-C.cur(),C.seatName(C.cur())+' has no legal move left.'));return;}
+ maybeCpu(C);}
+
+/* ================= 5. SIM ================= */
+const SIM_POS=[[150,25],[245,77],[245,182],[150,235],[55,182],[55,77]];
+stdInit('sim',{name:'Sim',icon:'⬡✏️',desc:'Force a triangle — in THEIR color',p:[2,2],payout:PAYOUTS.sim,
+ rules:'Six dots sit in a hexagon. Players take turns drawing a line between two dots IN THEIR OWN COLOR (you are blue, the other player is red). If you complete a triangle whose three sides are ALL YOUR OWN color, YOU lose on the spot. Last player standing wins.',
+ newState(){return {turn:0,over:false,sel:-1,edges:{}};},
+ render(R,C){const S=C.S;
+  let lines='';for(const k in S.edges){const [a,b]=k.split('-').map(Number);const p=S.edges[k];
+   lines+='<line x1="'+SIM_POS[a][0]+'" y1="'+SIM_POS[a][1]+'" x2="'+SIM_POS[b][0]+'" y2="'+SIM_POS[b][1]+'" stroke="'+(p===0?'#2470c9':'#c0392b')+'" stroke-width="4"/>';}
+  let dots='';SIM_POS.forEach((p,i)=>{dots+='<g data-dot="'+i+'" style="cursor:pointer"><circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(S.sel===i?14:11)+'" fill="'+(S.sel===i?'#ffe9a8':'#fffdf4')+'" stroke="#22304a" stroke-width="2.5"/></g>';});
+  bodyHTML(C,'⬡ Sim',turnBanner(C)+'<div class="paper"><svg viewBox="0 0 300 260" class="paperCanvas">'+lines+dots+'</svg>'
+  +'<p class="muted">You draw in <b style="color:'+(C.cur()===0?'#2470c9':'#c0392b')+'">'+(C.cur()===0?'blue':'red')+'</b>. Tap two dots to connect them. Complete a triangle in YOUR color and you lose!</p></div>');
+  document.getElementById('gameBody').querySelectorAll('[data-dot]').forEach(g=>g.onclick=()=>{if(!C.mine())return;const i=+g.dataset.dot;
+   if(S.sel<0){C.update(s=>{s.sel=i;},true);C.rerender();return;}
+   const a=Math.min(S.sel,i),b=Math.max(S.sel,i);
+   if(a===b||S.edges[a+'-'+b]!=null){C.update(s=>{s.sel=-1;},true);C.rerender();return;}
+   const seat=C.cur();C.update(s=>{s.sel=-1;s.edges[a+'-'+b]=seat;s.turn++;});afterSim(C,seat);});},
+ cpu(C){const S=C.S;const free=[];for(let a=0;a<6;a++)for(let b=a+1;b<6;b++)if(S.edges[a+'-'+b]==null)free.push([a,b]);
+  if(!free.length)return;const mine=Object.keys(S.edges).filter(k=>S.edges[k]===1);
+  const safe=free.filter(([a,b])=>!Logic.simLoses(mine.concat([a+'-'+b])));
+  const [a,b]=pickA(safe.length?safe:free);const seat=C.cur();
+  C.update(s=>{s.edges[a+'-'+b]=seat;s.turn++;},true);C.rerender();afterSim(C,seat);}});
+function afterSim(C,lastSeat){const S=C.S;const mine=Object.keys(S.edges).filter(k=>S.edges[k]===lastSeat);
+ const tri=Logic.simHasTriangle(mine);
+ if(tri)return later(350,()=>C.finish(1-lastSeat,C.seatName(lastSeat)+' completed a triangle in their own color ('+tri.map(x=>x+1).join('-')+') and loses!'));
+ const free=15-Object.keys(S.edges).length;
+ if(free===0)return later(350,()=>C.finish(lastSeat,'The hexagon is full — '+C.seatName(1-lastSeat)+' has no move and loses.'));
+ maybeCpu(C);}
+
+/* ================= 6. BULLS AND COWS ================= */
+stdInit('bulls',{name:'Bulls and Cows',icon:'🐂✏️',desc:'Crack the 4-digit code',p:[1,2],payout:PAYOUTS.bulls,
+ rules:'A secret 4-digit number is written down — all four digits different. You guess a 4-digit number (also all different digits). For each guess you score: a BULL for every digit in exactly the right position, and a COW for every right digit in the wrong position. Crack the code in 10 guesses or fewer to win.',
+ newState(){return {turn:0,over:false,secret:Logic.bullsSecret(),guesses:[]};},
+ render(R,C){const S=C.S;
+  bodyHTML(C,'🐂 Bulls and Cows','<div class="paper"><h3>🔢 Crack the code</h3>'
+  +'<p>Guesses left: <b>'+(10-S.guesses.length)+'</b> · Secret: <b>••••</b> (4 different digits)</p>'
+  +(S.guesses.length?'<table style="width:100%"><tr><th align="left">#</th><th align="left">Guess</th><th align="left">🐂 Bulls</th><th align="left">🐄 Cows</th></tr>'+S.guesses.map((g,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+g.g+'</b></td><td>'+g.bulls+'</td><td>'+g.cows+'</td></tr>').join('')+'</table>':'<p class="muted">No guesses yet. Example: guess 1234 — a bull means a digit is exactly right.</p>')
+  +'<div class="row"><input id="bcIn" class="grow" inputmode="numeric" maxlength="4" placeholder="4 different digits"><button class="btn small" id="bcGo">Guess</button></div><div class="err" id="bcErr"></div></div>');
+  const go=()=>{const val=$('#bcIn').value.trim();
+   if(!Logic.bullsValid(val)){$('#bcErr').textContent='Enter 4 digits, all different (e.g. 3057).';return;}
+   C.update(s=>{const r=Logic.bullsCows(s.secret,val);s.guesses.push({g:val,bulls:r.bulls,cows:r.cows});});
+   const last=C.S.guesses[C.S.guesses.length-1];
+   if(last.bulls===4)return later(300,()=>C.finish(0,'Code cracked: '+C.S.secret+' in '+C.S.guesses.length+' guesses!'));
+   if(C.S.guesses.length>=10)return later(300,()=>C.finish(C.mode==='pvc'?1:0,'Out of guesses! The code was '+C.S.secret+'.'));
+   C.rerender();};
+  $('#bcGo').onclick=go;$('#bcIn').addEventListener('keydown',e=>{if(e.key==='Enter')go();});}});
+
+/* ================= 7. CATEGORIES ================= */
+stdInit('categories',{name:'Categories',icon:'🔤✏️',desc:'Name · Place · Animal · Thing · Food',p:[1,2],payout:PAYOUTS.categories,
+ rules:'A letter is chosen at random. You have 60 seconds to write one answer for every category — Name, Place, Animal, Thing, Food — and every answer MUST start with that letter. Scoring the official way: a valid answer nobody else has scores 10, a valid answer the other player also has scores 5, and a blank or invalid answer scores 0. Highest total wins.',
+ newState(){return {turn:0,over:false,phase:'fill',letter:'ABCDEFGHIJKLMNOPRSTW'[rnd(20)],deadline:Date.now()+60000,cards:{},detail:null,totals:null};},
+ render(R,C){const S=C.S;
+  if(S.phase==='done'){bodyHTML(C,'🔤 Categories','<div class="paper"><h3>Letter: '+S.letter+' — results</h3>'+catDetailHTML(C)+'</div>');return;}
+  const whoKey=C.mode==='pvc'?'me':('p'+(Object.keys(S.cards).length));
+  bodyHTML(C,'🔤 Categories','<div class="paper"><h3>Letter: <span style="font-size:30px">'+S.letter+'</span> · <span id="catTimer">60</span>s left</h3>'
+  +'<p class="muted">'+(C.mode==='hotseat'?(Object.keys(S.cards).length===0?'Player 1':'Player 2')+', fill your card':'Fill your card')+' — every answer must start with '+S.letter+'.</p>'
+  +CAT_CATS.map(cat=>'<label>'+cat+'</label><input data-cat="'+cat+'" placeholder="'+cat+' starting with '+S.letter+'…" autocomplete="off">').join('')
+  +'<button class="btn" id="catDone">Done ✔</button></div>');
+  const tick=()=>{const el=document.getElementById('catTimer');if(!el)return;const left=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));el.textContent=left;
+   if(left<=0){submitCat(C);}};
+  every(500,tick);tick();
+  $('#catDone').onclick=()=>submitCat(C);}});
+function readCatCard(){const card={};document.querySelectorAll('[data-cat]').forEach(i=>card[i.dataset.cat]=i.value.trim());return card;}
+function submitCat(C){const S=C.S;if(S.phase==='done')return;clearTimers();
+ const card=readCatCard();
+ if(C.mode==='pvc'){S.cards.me=card;S.cards.bot=Logic.catBotCard(S.letter);finishCategories(C,'me','bot');}
+ else{const keys=Object.keys(S.cards);
+  if(keys.length===0){S.cards.p1=card;C.rerender();passCover(C,1);S.deadline=Date.now()+60000;}
+  else{S.cards.p2=card;finishCategories(C,'p1','p2');}}}
+function finishCategories(C,aKey,bKey){const S=C.S;const sc=Logic.catScore(S.cards[aKey],S.cards[bKey],S.letter);
+ const scB=Logic.catScore(S.cards[bKey],S.cards[aKey],S.letter);S.detail={a:sc.detail,b:scB.detail};S.totals={[aKey]:sc.total,[bKey]:scB.total};S.phase='done';C.rerender();
+ const myTotal=C.mode==='pvc'?sc.total:sc.total,oppTotal=scB.total;
+ later(600,()=>{const w=myTotal===oppTotal?-1:(myTotal>oppTotal?0:1);
+  C.finish(C.mode==='hotseat'?(myTotal===oppTotal?-1:(myTotal>oppTotal?0:1)):w,'Categories: '+C.seatName(0)+' '+myTotal+' pts · '+C.seatName(1)+' '+oppTotal+' pts.',
+  {title:myTotal===oppTotal?'🤝 Tied cards!':(myTotal>oppTotal?'🏆 '+esc(C.seatName(0))+' wins the round!':'🏆 '+esc(C.seatName(1))+' wins the round!'),body:'<div class="paper"><h3>Letter '+S.letter+' — score card</h3>'+catDetailHTML(C)+'</div>',result:C.mode==='hotseat'?null:(myTotal===oppTotal?'t':myTotal>oppTotal?'w':'l'),pts:myTotal>oppTotal?(PAYOUTS.categories):0});});}
+function catDetailHTML(C){const S=C.S;if(!S.detail)return '';const mineKey=C.mode==='pvc'?'me':'p1',botKey=C.mode==='pvc'?'bot':'p2';
+ let h='<table style="width:100%"><tr><th align="left">Category</th><th align="left">'+esc(C.seatName(0))+'</th><th align="left">Pts</th><th align="left">'+esc(C.seatName(1))+'</th></tr>';
+ for(const cat of CAT_CATS){const d=S.detail.a[cat];h+='<tr><td>'+cat+'</td><td>'+(d.ans?esc(d.ans):'<i>blank</i>')+(d.valid?'':' ✗')+'</td><td>'+d.pts+'</td><td>'+(d.bot?esc(d.bot):'<i>blank</i>')+'</td></tr>';}
+ return h+'</table><p><b>Totals — '+esc(C.seatName(0))+': '+S.totals[mineKey]+' · '+esc(C.seatName(1))+': '+S.totals[botKey]+'</b></p>';}
+
+/* ================= 8. MASH ================= */
+const MASH_CATS={Home:['Mansion','Apartment','Shack','House'],Partner:['Alex','Jordan','Sam','Riley'],Job:['Singer','Doctor','Chef','Pilot'],Car:['Limo','Truck','Bike','Sports Car'],Kids:['0','1','2','3'],City:['New York','Miami','Chicago','Los Angeles']};
+stdInit('mash',{name:'MASH',icon:'🔮✏️',desc:'Mansion, Apartment, Shack, House…',p:[1,4],payout:PAYOUTS.mash,
+ rules:'The classic fortune-telling game. Write FOUR options in every category (home, partner, job, car, number of kids, city). Then pick a magic number from 3 to 10 and count around and around, crossing off one option each time you land on the number, until exactly ONE option is left standing in every category. The survivors are your future!',
+ newState(){return {turn:0,over:false,result:null,magic:5};},
+ render(R,C){const S=C.S;
+  if(S.result){bodyHTML(C,'🔮 MASH','<div class="paper"><h3>🔮 Your fortune is sealed…</h3>'+mashStoryHTML(S.result)+'</div>');return;}
+  bodyHTML(C,'🔮 MASH','<div class="paper"><h3>Write your options</h3><p class="muted">Four options per category, separated by commas. The first letters of Home spell M-A-S-H: Mansion, Apartment, Shack, House.</p>'
+  +Object.keys(MASH_CATS).map(cat=>'<label>'+cat+'</label><input data-mash="'+cat+'" value="'+esc(MASH_CATS[cat].join(', '))+'">').join('')
+  +'<label>Magic number (3–10)</label><select id="mashN">'+Array.from({length:8},(_,i)=>'<option value="'+(i+3)+'"'+(i+3===S.magic?' selected':'')+'>'+(i+3)+'</option>').join('')+'</select>'
+  +'<button class="btn" id="mashGo">🔮 Tell my fortune</button></div>');
+  $('#mashGo').onclick=()=>{const cats={};let bad='';
+   document.querySelectorAll('[data-mash]').forEach(i=>{const opts=i.value.split(',').map(s=>s.trim()).filter(Boolean);if(opts.length<2)bad=i.dataset.mash;cats[i.dataset.mash]=opts;});
+   if(bad){toast('Give at least 2 options for '+bad+'.');return;}
+   C.update(s=>{s.magic=+$('#mashN').value;s.result=Logic.mashEliminate(cats,s.magic);},true);C.rerender();
+   later(500,()=>C.finish(-1,'', {title:'🔮 Your fortune',body:'<div class="paper">'+mashStoryHTML(C.S.result)+'</div>',result:'t',pts:PAYOUTS.mash}));};}});
+function mashStoryHTML(r){return '<p style="font-size:17px;line-height:1.7">You will live in a <b>'+esc(r.Home)+'</b> in <b>'+esc(r.City)+'</b>, married to <b>'+esc(r.Partner)+'</b>. You will work as a <b>'+esc(r.Job)+'</b>, drive a <b>'+esc(r.Car)+'</b>, and have <b>'+esc(r.Kids)+'</b> kid(s). The notebook has spoken! 📓✨</p>';}
+
+/* ================= 9. TABOO ================= */
+stdInit('taboo',{name:'Taboo',icon:'🚫✏️',desc:'Guess it — without the forbidden words',p:[1,4],payout:PAYOUTS.taboo,
+ rules:'A card shows a TARGET word and a list of TABOO words that may not be said. The clue-giver describes the target without using the target or ANY taboo word; the guessers call out answers. Here the computer deals the cards and gives a clean clue that uses none of the forbidden words — you type the target. 60 seconds, as many cards as you can: 5+ correct wins. In Pass & Play, the clue-giver sees the target and taboo list and the others guess out loud.',
+ newState(){return {turn:0,over:false,deck:shuffle(TABOO_BANK.map((_,i)=>i)),idx:0,score:0,seen:0,deadline:Date.now()+60000,done:false,last:''};},
+ render(R,C){const S=C.S;const card=TABOO_BANK[S.deck[S.idx%S.deck.length]];
+  bodyHTML(C,'🚫 Taboo','<div class="paper"><h3>⏱️ <span id="tabTimer">60</span>s · Score: '+S.score+' · Cards seen: '+S.seen+'</h3>'
+  +(S.last?'<div class="msg">'+esc(S.last)+'</div>':'')
+  +(C.mode==='hotseat'
+    ?'<p>🙈 <b>Clue-giver only:</b> the word is <span style="font-size:22px"><b>'+esc(card.target)+'</b></span></p><p>🚫 Never say: <b>'+card.taboo.map(esc).join(', ')+'</b> (or the word itself!)</p><p class="muted">Describe it out loud. When the others get it, tap Correct.</p><button class="btn" id="tabOk">✔️ They guessed it</button><button class="btn secondary" id="tabSkip">Skip card ⏭️</button>'
+    :'<p>🤖 <b>The computer\'s clue:</b></p><p style="font-size:18px">“'+esc(card.clue)+'”</p><p class="muted">It never used the target or any taboo word ('+card.taboo.map(esc).join(', ')+'). What is the word?</p><div class="row"><input id="tabIn" class="grow" placeholder="Your guess…" autocomplete="off"><button class="btn small" id="tabGo">Guess</button></div><button class="btn secondary small" id="tabSkip">Skip card ⏭️</button>')
+  +'</div>');
+  const tick=()=>{const el=document.getElementById('tabTimer');if(!el)return;const left=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));el.textContent=left;if(left<=0)finishTaboo(C);};
+  every(400,tick);tick();
+  const next=(okFlag,msg)=>{C.update(s=>{s.seen++;if(okFlag)s.score++;s.idx++;s.last=msg;},true);C.rerender();};
+  const okB=$('#tabOk');if(okB)okB.onclick=()=>next(true,'✔️ Correct — it was '+card.target+'!');
+  const sk=$('#tabSkip');if(sk)sk.onclick=()=>next(false,'⏭️ Skipped — it was '+card.target+'.');
+  const go=$('#tabGo');if(go){const guess=()=>{const v=$('#tabIn').value.trim().toUpperCase();
+    if(v===card.target)next(true,'✔️ Correct — it was '+card.target+'!');
+    else toast('Not quite — try again or skip.');};
+   go.onclick=guess;$('#tabIn').addEventListener('keydown',e=>{if(e.key==='Enter')guess();});}}});
+function finishTaboo(C){const S=C.S;if(S.done)return;S.done=true;clearTimers();
+ const win=S.score>=5;
+ C.finish(C.mode==='pvc'?(win?0:1):-1,'', {title:(win?'🏆 Time! ':'⏰ Time! ')+'You got '+S.score+' of '+S.seen+' cards.',body:'<div class="paper"><p>Score <b>'+S.score+'</b> · Cards seen <b>'+S.seen+'</b> · '+(win?'5+ correct — that is a win! 🎉':'Get 5+ correct to win next time.')+'</p></div>',result:C.mode==='hotseat'?null:(win?'w':'l'),pts:win?PAYOUTS.taboo:0});}
+
+/* ================= 10. CROSSWORDS ================= */
+stdInit('crossword',{name:'Crosswords',icon:'🔡✏️',desc:'Fill the grid from the clues',p:[1,2],payout:PAYOUTS.crossword,
+ rules:'Fill the interlocking grid so every Across and Down answer fits its clue and shares its crossing letters. Every square belongs to the puzzle. Use Check to mark right and wrong letters, or Reveal if you are stuck. Finish the whole grid correctly to win.',
+ newState(){return {turn:0,over:false,pick:-1,sol:'',nums:{},cells:{},entries:[],msg:''};},
+ render(R,C){const S=C.S;
+  if(S.pick<0){bodyHTML(C,'🔡 Crosswords','<div class="paper"><h3>Pick a puzzle</h3>'+CROSSWORDS.map((p,i)=>'<button class="btn secondary" data-pz="'+i+'">Puzzle '+(i+1)+' — '+p.size+'×'+p.size+', '+p.entries.length+' answers</button>').join('')+'</div>');
+   document.getElementById('gameBody').querySelectorAll('[data-pz]').forEach(b=>b.onclick=()=>{const pzCopy=JSON.parse(JSON.stringify(CROSSWORDS[+b.dataset.pz]));const built=Logic.cwBuild(pzCopy);
+    C.update(s=>{s.pick=+b.dataset.pz;s.sol=built.grid;s.nums=built.nums;s.entries=pzCopy.entries;s.cells={};},true);C.rerender();});return;}
+  const pz=CROSSWORDS[S.pick];const size=pz.size;
+  let grid='<div class="cwgrid" style="grid-template-columns:repeat('+size+',1fr)">';
+  for(let r=0;r<size;r++)for(let c=0;c<size;c++){const sol=S.sol[r][c];
+   if(sol==='#')grid+='<div class="cwcell block"></div>';
+   else{const num=S.nums[r+','+c];grid+='<div class="cwcell">'+(num?'<span class="num">'+num+'</span>':'')+'<input data-cell="'+r+','+c+'" maxlength="1" value="'+esc(S.cells[r+','+c]||'')+'" autocomplete="off"></div>';}}
+  grid+='</div>';
+  const across=(S.entries||[]).filter(e=>e.dir==='A'),down=(S.entries||[]).filter(e=>e.dir==='D');
+  bodyHTML(C,'🔡 Crosswords','<div class="paper"><h3>Puzzle '+(S.pick+1)+'</h3>'+grid
+  +(S.msg?'<div class="msg">'+esc(S.msg)+'</div>':'')
+  +'<h4>Across</h4>'+across.map(e=>'<div><b>'+e.num+'.</b> '+esc(e.clue)+' <span class="muted">('+e.answer.length+')</span></div>').join('')
+  +'<h4>Down</h4>'+down.map(e=>'<div><b>'+e.num+'.</b> '+esc(e.clue)+' <span class="muted">('+e.answer.length+')</span></div>').join('')
+  +'<button class="btn" id="cwCheck">✔️ Check</button><button class="btn secondary" id="cwReveal">👀 Reveal answers</button><button class="btn secondary" id="cwBack">↩️ Pick another puzzle</button></div>');
+  const gb=document.getElementById('gameBody');
+  gb.querySelectorAll('[data-cell]').forEach(inp=>inp.addEventListener('input',()=>{const [r,c]=inp.dataset.cell.split(',').map(Number);
+   C.S.cells[r+','+c]=inp.value.toUpperCase().slice(0,1);inp.value=C.S.cells[r+','+c];
+   if(cwComplete(C)){later(300,()=>C.finish(0,'Puzzle '+(S.pick+1)+' completed — every answer correct! 🎉'));}
+   if(inp.value&&c<size-1){const nx=gb.querySelector('[data-cell="'+r+','+(c+1)+'"]');if(nx)nx.focus();}}));
+  $('#cwCheck').onclick=()=>{let right=0,wrong=0;
+   gb.querySelectorAll('[data-cell]').forEach(inp=>{const [r,c]=inp.dataset.cell.split(',').map(Number);const v=(inp.value||'').toUpperCase();
+    inp.classList.remove('okc','badc');if(!v)return;if(v===S.sol[r][c]){inp.classList.add('okc');right++;}else{inp.classList.add('badc');wrong++;}});
+   C.update(s=>{s.msg='Check: '+right+' right, '+wrong+' wrong.';},true);
+   const msgEl=gb.querySelector('.msg');if(!cwComplete(C)){const d=document.createElement('div');d.className='msg';d.textContent='Check: '+right+' right, '+wrong+' wrong.';gb.querySelector('.paper').appendChild(d);}
+   if(cwComplete(C))later(300,()=>C.finish(0,'Puzzle '+(S.pick+1)+' completed — every answer correct! 🎉'));};
+  $('#cwReveal').onclick=()=>{C.update(s=>{for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(s.sol[r][c]!=='#')s.cells[r+','+c]=s.sol[r][c];},true);C.rerender();
+   later(400,()=>C.finish(-1,'', {title:'👀 Answers revealed',body:'<div class="paper"><p>The solution is on the board — no points this time. Try another puzzle and beat it fair and square!</p></div>',result:C.mode==='pvc'?'t':null,pts:0}));};
+  $('#cwBack').onclick=()=>{C.update(s=>{s.pick=-1;s.cells={};},true);C.rerender();};}});
+function built_num(S,e){return S.nums[e.r+','+e.c];}
+function cwComplete(C){const S=C.S;if(S.pick<0||!S.sol)return false;const size=CROSSWORDS[S.pick].size;
+ for(let r=0;r<size;r++)for(let c=0;c<size;c++){if(S.sol[r][c]==='#')continue;if((S.cells[r+','+c]||'')!==S.sol[r][c])return false;}return true;}
+
+/* ================= 11. WORD SEARCH ================= */
+stdInit('wordsearch',{name:'Word Search',icon:'🔎✏️',desc:'Find the hidden words',p:[1,2],payout:PAYOUTS.wordsearch,
+ rules:'Eight words are hidden in the 10×10 grid of letters — forwards across, down, or diagonally. Tap the FIRST letter of a word, then tap its LAST letter to circle it. Find all eight words to win. Your time is shown — faster is better!',
+ newState(){let gen=null,tries=0;while(!gen&&tries++<10)gen=Logic.wsGenerate(shuffle(WS_WORDS).slice(0,8),10);
+  return {turn:0,over:false,grid:gen.grid,placements:gen.placements,found:[],foundCells:{},sel:null,started:Date.now(),elapsed:0};},
+ render(R,C){const S=C.S;
+  let cells='';for(let r=0;r<10;r++)for(let c=0;c<10;c++){const k=r+','+c;const isSel=S.sel&&S.sel[0]===r&&S.sel[1]===c;
+   cells+='<div class="wscell '+(S.foundCells[k]?'found':'')+' '+(isSel?'sel':'')+'" data-cell="'+k+'">'+S.grid[r][c]+'</div>';}
+  bodyHTML(C,'🔎 Word Search','<div class="paper"><h3>Find all 8 words · ⏱️ <span id="wsTimer">'+S.elapsed+'</span>s</h3>'
+  +'<div class="wsgrid">'+cells+'</div>'
+  +'<div>'+Object.keys(S.placements).map(w=>'<span class="chip '+(S.found.includes(w)?'done':'')+'">'+w+'</span>').join('')+'</div>'
+  +'<p class="muted">'+(S.sel?'First letter picked — now tap the LAST letter of the word.':'Tap the first letter of a hidden word.')+'</p></div>');
+  every(1000,()=>{const el=document.getElementById('wsTimer');if(el&&!S.over){S.elapsed=Math.floor((Date.now()-S.started)/1000);el.textContent=S.elapsed;}});
+  document.getElementById('gameBody').querySelectorAll('.wscell').forEach(el=>el.onclick=()=>{const [r,c]=el.dataset.cell.split(',').map(Number);
+   if(!S.sel){C.update(s=>{s.sel=[r,c];},true);C.rerender();return;}
+   const [r1,c1]=S.sel;const dr=Math.sign(r-r1),dc=Math.sign(c-c1);const len=Math.max(Math.abs(r-r1),Math.abs(c-c1))+1;
+   const straight=(r===r1||c===c1||Math.abs(r-r1)===Math.abs(c-c1))&&len>=3;
+   let word='';if(straight){const cells=[];for(let i=0;i<len;i++)cells.push([r1+dr*i,c1+dc*i]);word=Logic.wsWordAt(S.grid,cells);
+    const rev=word.split('').reverse().join('');
+    const hit=[word,rev].find(w=>S.placements[w]&&!S.found.includes(w));
+    if(hit){C.update(s=>{s.sel=null;s.found.push(hit);S.placements[hit].forEach(([rr,cc])=>s.foundCells[rr+','+cc]=1);});Sound.win();
+     if(C.S.found.length>=Object.keys(C.S.placements).length)return later(350,()=>C.finish(0,'All 8 words found in '+C.S.elapsed+' seconds! 🔎🎉'));
+     C.rerender();return;}}
+   C.update(s=>{s.sel=null;},true);toast('Not a hidden word — try again.');C.rerender();});}});
+
+/* ================= 12. GHOST ================= */
+stdInit('ghost',{name:'Ghost',icon:'👻✏️',desc:'Don\'t finish the word',p:[2,2],payout:PAYOUTS.ghost,
+ rules:'Players take turns adding ONE letter to a growing word fragment. Every player must have a real word in mind that starts with the fragment. If you add a letter that COMPLETES a word of 4+ letters, you lose the round. You may instead CHALLENGE the player before you: if they cannot name a real word that continues the fragment, THEY lose the round — if they can, YOU lose it. Round losers collect letters of G-H-O-S-T. First player to spell GHOST loses the match.',
+ newState(){return {turn:0,over:false,frag:'',ghost:['',''],round:1,phase:'play',proveSeat:-1,msg:'',starter:0};},
+ render(R,C){const S=C.S;
+  let inner='<div class="paper"><h3>Round '+S.round+' · 👻 '+esc(C.seatName(0))+': "'+(S.ghost[0]||'—')+'" · '+esc(C.seatName(1))+': "'+(S.ghost[1]||'—')+'"</h3>'
+  +(S.msg?'<div class="msg">'+esc(S.msg)+'</div>':'')
+  +'<div class="frag">'+(S.frag?esc(S.frag.toUpperCase()):'?')+'</div>';
+  if(S.phase==='prove'){inner+='<p><b>'+esc(C.seatName(S.proveSeat))+'</b>, you were challenged! Type a real word (4+ letters) that starts with <b>'+esc(S.frag.toUpperCase())+'</b>:</p>'
+   +'<div class="row"><input id="ghWord" class="grow" placeholder="Your word…" autocomplete="off"><button class="btn small" id="ghProve">Prove it</button></div>';}
+  else{inner+=turnBanner(C)+'<div class="row"><input id="ghLetter" class="grow" maxlength="1" placeholder="Add a letter (A–Z)" autocomplete="off"><button class="btn small" id="ghAdd">Add letter</button></div>'
+   +'<button class="btn secondary" id="ghChallenge" '+(S.frag.length>=2&&C.mine()?'':'disabled')+'>⚔️ Challenge '+esc(C.seatName(1-C.cur()))+' — no word continues this!</button>'
+   +'<p class="muted">Fragment so far: '+S.frag.length+' letter(s). Completing a word of 4+ letters loses the round.</p>';}
+  inner+='</div>';
+  bodyHTML(C,'👻 Ghost',inner);
+  const gb=document.getElementById('gameBody');
+  const addBtn=gb.querySelector('#ghAdd');
+  if(addBtn)addBtn.onclick=()=>{const L=(gb.querySelector('#ghLetter').value||'').toUpperCase();if(!/^[A-Z]$/.test(L)){toast('Type one letter A–Z.');return;}
+   ghostAddLetter(C,L);};
+  const chBtn=gb.querySelector('#ghChallenge');
+  if(chBtn)chBtn.onclick=()=>ghostChallenge(C);
+  const pvBtn=gb.querySelector('#ghProve');
+  if(pvBtn)pvBtn.onclick=()=>{const w=(gb.querySelector('#ghWord').value||'').trim().toLowerCase();
+   const ok=w.startsWith(S.frag)&&w.length>S.frag.length&&GHOST_SET.has(w);
+   if(ok)ghostRoundLose(C,1-S.proveSeat,C.seatName(S.proveSeat)+' proved it with "'+w.toUpperCase()+'" — the challenger loses the round.');
+   else ghostRoundLose(C,S.proveSeat,C.seatName(S.proveSeat)+' could not name a word continuing "'+S.frag.toUpperCase()+'" — round lost.');};},
+ cpu(C){const S=C.S;
+  // Bot may challenge if the fragment looks dead or rarely
+  const conts=Logic.ghostContinuations(S.frag);
+  if(S.frag.length>=3&&(conts.length===0||Math.random()<0.08)){ghostChallengeByBot(C);return;}
+  if(!conts.length){ghostChallengeByBot(C);return;}
+  // pick a target word; avoid completing a word if any alternative exists
+  const safe=conts.filter(w=>!(w.length===S.frag.length+1));
+  const pool=safe.length?safe:conts;const target=pickA(pool);const L=target[S.frag.length].toUpperCase();
+  later(300,()=>ghostAddLetter(C,L,true));}});
+function ghostAddLetter(C,L,byBot){const S=C.S;const seat=C.cur();
+ C.update(s=>{s.frag+=L.toLowerCase();s.turn++;s.msg=C.seatName(seat)+' added '+L+'.';},true);
+ if(Logic.ghostCompleteMove(C.S.frag)){ghostRoundLose(C,seat,C.seatName(seat)+' completed the word "'+C.S.frag.toUpperCase()+'" — round lost!');return;}
+ C.rerender();
+ // bot turns: either the cpu hook (add) runs via maybeCpu, or bot must prove a challenge — handled in render flow
+ if(C.mode==='pvc'&&C.cur()===1&&C.S.phase==='play')GAMES.ghost.cpu(C);}
+function ghostChallenge(C){const S=C.S;const challenger=C.cur(),defender=1-challenger;
+ if(C.mode==='pvc'&&defender===1){ // challenging the bot: it names a word if it can
+  const conts=Logic.ghostContinuations(S.frag);
+  if(conts.length)ghostRoundLose(C,challenger,'The computer proves it: "'+pickA(conts).toUpperCase()+'" continues the fragment. Your challenge fails — you lose the round.');
+  else ghostRoundLose(C,defender,'The computer cannot name a word continuing "'+S.frag.toUpperCase()+'" — bluff called! The computer loses the round.');
+  return;}
+ C.update(s=>{s.phase='prove';s.proveSeat=defender;s.msg=C.seatName(challenger)+' challenges!';},true);C.rerender();
+ if(C.mode==='hotseat')passCover(C,defender);}
+function ghostChallengeByBot(C){const S=C.S; // bot (seat1) challenges the human (seat0)
+ C.update(s=>{s.phase='prove';s.proveSeat=0;s.msg='The computer challenges you — it does not believe a word continues "'+s.frag.toUpperCase()+'"!';},true);C.rerender();}
+function ghostRoundLose(C,seat,reason){const S=C.S;
+ C.update(s=>{s.ghost[seat]+='GHOST'[s.ghost[seat].length];s.msg=reason;s.phase='play';s.frag='';s.round++;s.turn=seat;s.proveSeat=-1;},true);
+ if(C.S.ghost[seat].length>=5){later(400,()=>C.finish(1-seat,reason+' '+C.seatName(seat)+' has spelled GHOST and loses the match.'));return;}
+ C.rerender();toast(reason);
+ if(C.mode==='pvc'&&C.cur()===1){later(600,()=>{ // bot starts the new round with a letter from a word it has in mind
+  const w=pickA(GHOST_WORDS.filter(x=>x.length>=5));ghostAddLetter(C,w[0].toUpperCase(),true);});}}
+
+/* ================= 13. WORD LADDERS ================= */
+stdInit('ladder',{name:'Word Ladders',icon:'🪜✏️',desc:'One letter at a time',p:[1,2],payout:PAYOUTS.ladder,
+ rules:'Start at the given word and reach the target word by changing EXACTLY ONE letter at a time. Every step must be a real word in the dictionary. The par shows the best known number of steps — match it if you can!',
+ newState(){const pz=pickA(LADDER_PUZZLES);return {turn:0,over:false,pz:pz,steps:[pz.s],hints:0};},
+ render(R,C){const S=C.S;
+  bodyHTML(C,'🪜 Word Ladders','<div class="paper"><h3>'+S.pz.s+' ➜ '+S.pz.t+'</h3>'
+  +'<p>Par: <b>'+(S.pz.sol.length-1)+' steps</b> · Your steps: <b>'+(S.steps.length-1)+'</b>'+(S.hints?' · Hints used: '+S.hints:'')+'</p>'
+  +'<div>'+S.steps.map((w,i)=>'<span class="chip" style="'+(i===S.steps.length-1?'background:#ffe9a8':'')+'">'+esc(w)+'</span>'+(i<S.steps.length-1?' → ':'')).join('')+'</div>'
+  +'<div class="row"><input id="wlIn" class="grow" placeholder="Next word — change ONE letter" autocomplete="off"><button class="btn small" id="wlGo">Step</button></div>'
+  +'<div class="row"><button class="btn secondary small" id="wlHint">💡 Hint (uses the solution)</button><button class="btn secondary small" id="wlNew">🎲 New puzzle</button></div>'
+  +'<div class="err" id="wlErr"></div></div>');
+  const step=w=>{w=String(w||'').trim().toUpperCase();const last=S.steps[S.steps.length-1];
+   if(w.length!==last.length){$('#wlErr').textContent='Must be '+last.length+' letters, same as '+last+'.';return;}
+   if(!Logic.ladderOneLetter(last.toLowerCase(),w.toLowerCase())){$('#wlErr').textContent='Change EXACTLY one letter from '+last+'.';return;}
+   if(!Logic.ladderValid(w)){$('#wlErr').textContent='"'+w+'" is not in the word list.';return;}
+   if(S.steps.includes(w)){$('#wlErr').textContent='You already used '+w+'.';return;}
+   C.update(s=>{s.steps.push(w);});
+   if(w===S.pz.t){const n=S.steps.length-1,par=S.pz.sol.length-1;
+    later(300,()=>C.finish(0,'Reached '+S.pz.t+' in '+n+' steps (par '+par+')'+(n<=par?' — par or better! 🏆':'')+'.'));
+    return;}C.rerender();};
+  $('#wlGo').onclick=()=>step($('#wlIn').value);
+  $('#wlIn').addEventListener('keydown',e=>{if(e.key==='Enter')step($('#wlIn').value);});
+  $('#wlHint').onclick=()=>{const sol=S.pz.sol;const cur=S.steps[S.steps.length-1];
+   // walk the known solution from the current step if we are on it, else nudge toward target letter diffs
+   const idx=sol.indexOf(cur);let next=null;
+   if(idx>=0&&idx<sol.length-1)next=sol[idx+1];
+   else{ // find a valid word one letter closer to target
+    const cand=LADDER_WORDS.map(w=>w.toUpperCase()).filter(w=>w.length===cur.length&&Logic.ladderOneLetter(cur.toLowerCase(),w.toLowerCase())&&!S.steps.includes(w));
+    const closer=cand.filter(w=>{let d0=0,d1=0;for(let i=0;i<w.length;i++){if(cur[i]!==S.pz.t[i])d0++;if(w[i]!==S.pz.t[i])d1++;}return d1<d0;});
+    next=closer[0]||cand[0];}
+   if(next){C.update(s=>{s.hints++;},true);step(next);}else toast('No hint found from here — try stepping back with a new puzzle.');};
+  $('#wlNew').onclick=()=>{const C2=C;C.update(s=>{const pz=pickA(LADDER_PUZZLES);s.pz=pz;s.steps=[pz.s];s.hints=0;},true);C2.rerender();};}});
+
+/* ================= 14. CONSEQUENCES ================= */
+const CONS_FIELDS=[
+ {k:'adj1',label:'An adjective (e.g. sparkly)',who:'me'},
+ {k:'man',label:'A man\'s name',who:'other'},
+ {k:'adj2',label:'Another adjective (e.g. grumpy)',who:'other'},
+ {k:'woman',label:'A woman\'s name',who:'me'},
+ {k:'place',label:'A place (e.g. the top of a ferris wheel)',who:'me'},
+ {k:'heSaid',label:'He said… (a full sentence)',who:'other'},
+ {k:'sheSaid',label:'She said… (a full sentence)',who:'me'},
+ {k:'ending',label:'And the consequence was…',who:'other'}];
+const CONS_BOT={man:['Reginald','Big Mike','Professor Plum','Chad','Old Man Jenkins','Captain Bruno'],adj2:['grumpy','sparkly','suspiciously cheerful','sleepy','dramatic','polka-dotted'],heSaid:['"I have been waiting my whole life for this moment."','"That is NOT a real penguin."','"Quick — act natural, the queen is watching."','"I only came for the free snacks."','"You remind me of my first accordion."'],ending:['they both won the three-legged race and split a giant sandwich','the ferris wheel stopped at the top for exactly one hour','everyone agreed never to speak of the goat again','they opened a tiny café that only sells soup','it started raining confetti, indoors','they were crowned honorary mayors of the snack table']};
+stdInit('consequences',{name:'Consequences',icon:'📝✏️',desc:'The folded-paper story game',p:[1,4],payout:PAYOUTS.consequences,
+ rules:'The classic fold-over story. Each player secretly writes their lines — an adjective, a man\'s name, another adjective, a woman\'s name, a place, what HE said, what SHE said, and what the consequence was — with the paper folded so nobody sees the lines before theirs. Here your lines and the other player\'s secret lines stay hidden until the big reveal, when the whole mixed-up story is read aloud.',
+ newState(){return {turn:0,over:false,phase:'write',vals:{},story:''};},
+ render(R,C){const S=C.S;
+  if(S.phase==='reveal'){bodyHTML(C,'📝 Consequences','<div class="paper"><h3>📖 The big reveal!</h3><p style="font-size:18px;line-height:1.8">'+consStory(S.vals)+'</p></div>');return;}
+  const mineFields=CONS_FIELDS.filter(f=>C.mode==='pvc'?f.who==='me':(Object.keys(S.vals).length===0?f.who==='me':f.who==='other'));
+  bodyHTML(C,'📝 Consequences','<div class="paper"><h3>✍️ '+(C.mode==='hotseat'?(Object.keys(S.vals).length===0?'Player 1':'Player 2')+', write your secret lines':'Write your secret lines')+'</h3>'
+  +'<p class="muted">Shh — the other lines are hidden until the reveal, just like folding the paper over.</p>'
+  +mineFields.map(f=>'<label>'+f.label+'</label><input data-cons="'+f.k+'" autocomplete="off">').join('')
+  +'<button class="btn" id="consGo">Fold the paper &amp; pass it on 🙈</button></div>');
+  $('#consGo').onclick=()=>{const vals={};let missing='';
+   document.querySelectorAll('[data-cons]').forEach(i=>{if(!i.value.trim())missing=i.dataset.cons;vals[i.dataset.cons]=i.value.trim();});
+   if(missing){toast('Fill in every line first!');return;}
+   if(C.mode==='pvc'){C.update(s=>{Object.assign(s.vals,vals);for(const f of CONS_FIELDS)if(f.who==='other')s.vals[f.k]=pickA(CONS_BOT[f.k]||['???']);s.phase='reveal';},true);C.rerender();
+    later(500,()=>C.finish(-1,'', {title:'📖 The story is complete!',body:'<div class="paper"><p style="font-size:17px;line-height:1.8">'+consStory(C.S.vals)+'</p></div>',result:'t',pts:PAYOUTS.consequences}));}
+   else if(Object.keys(S.vals).length===0){C.update(s=>{Object.assign(s.vals,vals);},true);passCover(C,1);C.rerender();}
+   else{C.update(s=>{Object.assign(s.vals,vals);s.phase='reveal';},true);C.rerender();
+    later(500,()=>C.finish(-1,'', {title:'📖 The story is complete!',body:'<div class="paper"><p style="font-size:17px;line-height:1.8">'+consStory(C.S.vals)+'</p></div>',result:null,pts:0}));}};}});
+function consStory(v){return 'The <b>'+esc(v.adj1||'?')+'</b> <b>'+esc(v.man||'?')+'</b> met the <b>'+esc(v.adj2||'?')+'</b> <b>'+esc(v.woman||'?')+'</b> at <b>'+esc(v.place||'?')+'</b>.<br>He said, “'+esc(v.heSaid||'…')+'”<br>She said, “'+esc(v.sheSaid||'…')+'”<br>And the consequence was… <b>'+esc(v.ending||'…')+'</b>';}
+
+/* ================= 15. PAPER TELEPHONE ================= */
+const TEL_PHRASES=['A cat chasing a fish','A house under a rainbow','A boat sailing to the moon','A dog with a big hat','A tree full of stars','A bird carrying a key','A snake wearing a crown','A fish driving a car'];
+function telDrawFor(text){const up=String(text||'').toUpperCase();
+ for(const w of PIC_WORDS)if(up.includes(w))return w;
+ if(up.includes('DOG')||up.includes('PUPPY'))return 'CAT';if(up.includes('RAINBOW'))return 'SUN';
+ return pickA(PIC_WORDS);}
+function drawStrokesOn(cv,strokes, upto){const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);ctx.strokeStyle='#22304a';ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';
+ // flatten points with stroke breaks
+ const flat=[];strokes.forEach(st=>{st.forEach((p,i)=>flat.push({p:p,br:i===0}));});
+ const n=upto==null?flat.length:Math.min(flat.length,Math.floor(upto));
+ ctx.beginPath();let pen=false;
+ for(let i=0;i<n;i++){const {p,br}=flat[i];const x=p[0]/100*W,y=p[1]/100*H;if(br||!pen){ctx.moveTo(x,y);pen=true;}else ctx.lineTo(x,y);}
+ ctx.stroke();}
+stdInit('telephone',{name:'Paper Telephone',icon:'📞✏️',desc:'Write it, draw it, guess it — it mutates!',p:[1,4],payout:PAYOUTS.telephone,
+ rules:'Players sit in a chain. The first writes a phrase and passes it on: the next player must DRAW the phrase, the next must GUESS the drawing in words, the next DRAWS that guess — writing and drawing alternate until the paper comes back. Then everyone compares the first phrase with the last guess and laughs at how it mutated. Here you play the chain with the computer over 5 turns.',
+ newState(){return {turn:0,over:false,chain:[],phase:'write'};},
+ render(R,C){const S=C.S;
+  if(S.phase==='reveal'){let h='<div class="paper"><h3>📞 The whole chain, start to finish!</h3>';
+   S.chain.forEach((e,i)=>{h+='<div style="margin:10px 0"><b>'+(i+1)+'. '+esc(e.by)+' — '+(e.type==='draw'?'drew':'wrote')+':</b><br>'+(e.type==='draw'?'<img src="'+e.img+'" style="width:100%;border:2px solid #9db9dc;border-radius:10px;background:#fff">':'<span style="font-size:17px">“'+esc(e.text)+'”</span>')+'</div>';});
+   h+='<p>It started as “<b>'+esc(S.chain[0].text||'')+'</b>” and ended as “<b>'+esc((S.chain.filter(e=>e.type==='phrase').slice(-1)[0]||{}).text||'')+'</b>” 😂</p></div>';
+   bodyHTML(C,'📞 Paper Telephone',h);return;}
+  if(S.phase==='write'){bodyHTML(C,'📞 Paper Telephone','<div class="paper"><h3>1️⃣ Write a starting phrase</h3><p class="muted">Something drawable — like “a cat chasing a fish”. Or tap the dice for one.</p>'
+   +'<div class="row"><input id="telIn" class="grow" placeholder="Your phrase…" autocomplete="off"><button class="btn small secondary" id="telDice">🎲</button></div><button class="btn" id="telGo">Pass it on 📩</button></div>');
+   $('#telDice').onclick=()=>{$('#telIn').value=pickA(TEL_PHRASES);};
+   $('#telGo').onclick=()=>{const t=$('#telIn').value.trim();if(t.length<3){toast('Write a phrase first!');return;}
+    C.update(s=>{s.chain.push({type:'phrase',by:C.seatName(0),text:t});s.phase='botdraw';},true);telBotDraw(C);};return;}
+  if(S.phase==='botdraw'){bodyHTML(C,'📞 Paper Telephone','<div class="paper"><h3>2️⃣ The computer is drawing… ✍️</h3><p class="muted">Peek if you like — in the real game this page stays folded!</p></div>');return;}
+  if(S.phase==='guess'){const last=S.chain[S.chain.length-1];
+   bodyHTML(C,'📞 Paper Telephone','<div class="paper"><h3>🤔 Guess the drawing</h3><img src="'+last.img+'" style="width:100%;border:2px solid #9db9dc;border-radius:10px;background:#fff"><div class="row"><input id="telGuess" class="grow" placeholder="What is this drawing of?" autocomplete="off"><button class="btn small" id="telGuessGo">Guess</button></div></div>');
+   $('#telGuessGo').onclick=()=>{const t=$('#telGuess').value.trim();if(t.length<2){toast('Make a guess!');return;}
+    C.update(s=>{s.chain.push({type:'phrase',by:C.seatName(0),text:t});s.phase='drawGuess';},true);C.rerender();};return;}
+  if(S.phase==='drawGuess'){const lastPhrase=S.chain[S.chain.length-1];
+   bodyHTML(C,'📞 Paper Telephone','<div class="paper"><h3>🎨 Draw this guess: “'+esc(lastPhrase.text)+'”</h3><canvas id="telCanvas" class="draw" width="340" height="240"></canvas><div class="row"><button class="btn small secondary" id="telClear">Clear</button><button class="btn small" id="telDrawn">Done drawing ✔</button></div></div>');
+   setupDrawCanvas('telCanvas');$('#telClear').onclick=()=>{const cv=$('#telCanvas');cv.getContext('2d').clearRect(0,0,cv.width,cv.height);};
+   $('#telDrawn').onclick=()=>{const img=$('#telCanvas').toDataURL();
+    C.update(s=>{s.chain.push({type:'draw',by:C.seatName(0),img:img});s.phase='botguess';},true);telBotGuess(C);};return;}
+  if(S.phase==='botguess'){bodyHTML(C,'📞 Paper Telephone','<div class="paper"><h3>The computer is guessing your drawing… 🤔</h3></div>');return;}}});
+function telBotDraw(C){C.rerender();later(900,()=>{
+ const last=C.S.chain[C.S.chain.length-1];const word=telDrawFor(last.text);
+ const cv=document.createElement('canvas');cv.width=340;cv.height=240;const ctx=cv.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,340,240);
+ const tmp={getContext:()=>ctx,width:340,height:240};drawStrokesOn(tmp,PIC_DRAW[word]);
+ const img=cv.toDataURL();
+ C.update(s=>{s.chain.push({type:'draw',by:'Computer 🤖',img:img,word:word});s.phase='guess';},true);C.rerender();});}
+function telBotGuess(C){C.rerender();later(900,()=>{
+ const orig=C.S.chain.filter(e=>e.type==='draw').slice(-2)[0];
+ const draws=C.S.chain.filter(e=>e.type==='draw');const botDraw=draws.find(d=>d.by&&d.by.includes('Computer'));
+ const phraseGuess=botDraw&&Math.random()<0.55?pickA(TEL_PHRASES):pickA(TEL_PHRASES);
+ C.update(s=>{s.chain.push({type:'phrase',by:'Computer 🤖',text:phraseGuess});s.phase='reveal';},true);C.rerender();later(400,()=>telFinish(C));});}
+function telFinish(C){C.finish(-1,'', {title:'📞 Chain complete!',body:'<div class="paper"><p>The full chain is on the board behind this card — start phrase vs last guess. That is the game: it ALWAYS mutates. 😂</p></div>',result:'t',pts:PAYOUTS.telephone});}
+
+function setupDrawCanvas(id,onStroke){const cv=document.getElementById(id);if(!cv)return;const ctx=cv.getContext('2d');
+ ctx.strokeStyle='#22304a';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';let drawing=false,strokes=0;
+ const pos=e=>{const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:(t.clientX-r.left)*cv.width/r.width,y:(t.clientY-r.top)*cv.height/r.height};};
+ const start=e=>{e.preventDefault();drawing=true;strokes++;if(onStroke)onStroke(strokes);const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);};
+ const move=e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();};
+ const end=()=>{drawing=false;};
+ cv.addEventListener('pointerdown',start);cv.addEventListener('pointermove',move);cv.addEventListener('pointerup',end);cv.addEventListener('pointerleave',end);
+ cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
+
+/* ================= boot ================= */
+function boot(){
+ const sb=$('#soundBtn');if(sb){sb.textContent=Sound.muted?'🔇':'🔊';sb.classList.toggle('off',Sound.muted);sb.onclick=()=>Sound.toggle();}
+ const mb=$('#micBtn');if(mb)mb.onclick=()=>Voice.toggleMic();
+ document.querySelectorAll('#bottomNav button').forEach(b=>b.onclick=()=>{Sound.click();UI.go(b.dataset.v);});
+ window.addEventListener('popstate',()=>{if(inGame)UI.confirmQuit(()=>{inGame=false;clearTimers();Voice.leave();Net.leave(true);window._C=null;UI._go('home');});});
+ Backend.init().then(()=>{Auth.init();UI.refresh();UI.go('home');
+  if(Auth.user){Points.pull();Friends.seedRequests&&Backend.mode!=='firebase'&&Friends.seedRequests();}});
+}
+try{ if(typeof document!=='undefined'&&document.getElementById&&document.getElementById('view'))boot(); }catch(e){console.warn(e);}
+/* test hook (node tests read the pure Logic + banks; browser use unaffected) */
+try{ if(typeof window!=='undefined')window.__TEST__={Logic:Logic,GHOST_WORDS:GHOST_WORDS,GHOST_SET:GHOST_SET,LADDER_SET:LADDER_SET,LADDER_PUZZLES:LADDER_PUZZLES,TABOO_BANK:TABOO_BANK,CROSSWORDS:CROSSWORDS,CAT_LISTS:CAT_LISTS,HANG_WORDS:(typeof HANG_WORDS!=='undefined'?HANG_WORDS:[])}; }catch(e){}
+try{ if(typeof module!=='undefined'&&module.exports)module.exports={Logic:Logic,GHOST_WORDS:GHOST_WORDS,LADDER_PUZZLES:LADDER_PUZZLES,TABOO_BANK:TABOO_BANK,CROSSWORDS:CROSSWORDS}; }catch(e){}
+</script>
+</body>
+</html>
