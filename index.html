@@ -123,6 +123,7 @@ canvas.paperCanvas{background:transparent; width:100%; touch-action:none;}
    PvP, friends, shared Top 50 and voice talk (pg_* RTDB namespace).
    NO secrets are baked into this file — keys live in localStorage only. */
 const START_POINTS=1000, DAILY_BONUS=500;
+const DEMO_USER='demo', DEMO_PASS='demo1234'; // seeded demo account (demo mode)
 const PAYOUTS={dots:60,ttt:40,hangman:50,sprouts:70,sim:60,bulls:60,categories:60,mash:30,taboo:60,crossword:70,wordsearch:60,ghost:60,ladder:60,consequences:30,telephone:40};
 
 /* ================= utils ================= */
@@ -173,6 +174,8 @@ function newCode(){const cs='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i
 const Auth={user:null, // {uid, username, code}
  accounts(){return store.get('accounts',{});},
  saveAccounts(a){store.set('accounts',a);},
+ ensureDemo(){const a=this.accounts();const id='local_'+DEMO_USER;
+  if(!a[id]){a[id]={username:'Demo',pw:DEMO_PASS,code:'DEMO42',points:START_POINTS,wins:0,lastDaily:0,stats:{},friends:[],requests:[],sent:[]};this.saveAccounts(a);}},
  init(){
   const sess=store.get('session',null);
   if(Backend.mode==='firebase'){
@@ -186,6 +189,7 @@ const Auth={user:null, // {uid, username, code}
    });
    return;
   }
+  this.ensureDemo();
   if(sess){const a=this.accounts()[sess];if(a){this.user={uid:sess,username:a.username,code:a.code};Points.pullLocal();return;}}
   this.user=null;
  },
@@ -641,10 +645,11 @@ const UI={view:'home',curGame:null,
  home(v){
   if(!Auth.user){v.innerHTML='<h2>✏️ Hush Music Paper Games</h2>'
    +'<div class="paper"><h3>📓 Welcome to the notebook!</h3><p>15 classic pen &amp; paper games — Dots and Boxes, Hangman, Ghost, Word Search, Taboo and more — with <b>🤖 vs Computer</b>, <b>👥 Pass &amp; Play</b> and <b>🌐 Online PvP</b> rooms, friends, text chat, voice talk, points and a Top 50 leaderboard.</p></div>'
-   +'<div class="card"><h3>🔑 Log in</h3><label>'+(Backend.mode==='firebase'?'Email':'Username')+'</label><input id="liId" autocomplete="username"><label>Password</label><input id="liPw" type="password" autocomplete="current-password"><div class="err" id="liErr"></div><button class="btn" id="liBtn">Log in</button></div>'
+   +'<div class="card"><h3>🔑 Log in</h3><label>'+(Backend.mode==='firebase'?'Email':'Username')+'</label><input id="liId" autocomplete="username"><label>Password</label><input id="liPw" type="password" autocomplete="current-password"><div class="err" id="liErr"></div><button class="btn" id="liBtn">Log in</button>'+(Backend.mode==='firebase'?'':'<button class="btn secondary" id="demoBtn">🎮 One-tap demo login</button><div class="muted">Demo account — Username: <b>demo</b> · Password: <b>demo1234</b></div>')+'</div>'
    +'<div class="card"><h3>✨ Sign up</h3><label>Username</label><input id="suName" maxlength="20">'+(Backend.mode==='firebase'?'<label>Email</label><input id="suEmail" type="email">':'')+'<label>Password</label><input id="suPw" type="password"><div class="err" id="suErr"></div><button class="btn secondary" id="suBtn">Create account (+'+START_POINTS+' ⭐)</button>'
    +'<div class="muted">Demo mode: accounts live on this device only. Connect Firebase in Profile → Setup for real logins, friends &amp; online play.</div></div>';
    $('#liBtn').onclick=async()=>{const e=await Auth.login($('#liId').value.trim(),$('#liPw').value);if(e)$('#liErr').textContent=e;else{Points.pullLocal&&Backend.mode!=='firebase'&&Points.pullLocal();UI.refresh();UI.render();toast('Welcome back, '+Auth.user.username+'!');}};
+   const dBtn=$('#demoBtn');if(dBtn)dBtn.onclick=async()=>{const e=await Auth.login(DEMO_USER,DEMO_PASS);if(e)$('#liErr').textContent=e;else{Points.pullLocal();UI.refresh();UI.render();toast('Welcome, Demo! 🎮');}};
    $('#suBtn').onclick=async()=>{const name=$('#suName').value.trim();if(name.length<2){$('#suErr').textContent='Username needs 2+ characters.';return;}
     const e=await Auth.signup(name,Backend.mode==='firebase'?$('#suEmail').value.trim():name,$('#suPw').value);if(e)$('#suErr').textContent=e;else{UI.refresh();UI.render();toast('Account created — you got '+START_POINTS+' ⭐');}};
    return;}
@@ -1328,7 +1333,7 @@ function boot(){
 }
 try{ if(typeof document!=='undefined'&&document.getElementById&&document.getElementById('view'))boot(); }catch(e){console.warn(e);}
 /* test hook (node tests read the pure Logic + banks; browser use unaffected) */
-try{ if(typeof window!=='undefined')window.__TEST__={Logic:Logic,GHOST_WORDS:GHOST_WORDS,GHOST_SET:GHOST_SET,LADDER_SET:LADDER_SET,LADDER_PUZZLES:LADDER_PUZZLES,TABOO_BANK:TABOO_BANK,CROSSWORDS:CROSSWORDS,CAT_LISTS:CAT_LISTS,HANG_WORDS:(typeof HANG_WORDS!=='undefined'?HANG_WORDS:[])}; }catch(e){}
+try{ if(typeof window!=='undefined')window.__TEST__={Logic:Logic,Auth:Auth,DEMO_USER:DEMO_USER,DEMO_PASS:DEMO_PASS,GHOST_WORDS:GHOST_WORDS,GHOST_SET:GHOST_SET,LADDER_SET:LADDER_SET,LADDER_PUZZLES:LADDER_PUZZLES,TABOO_BANK:TABOO_BANK,CROSSWORDS:CROSSWORDS,CAT_LISTS:CAT_LISTS,HANG_WORDS:(typeof HANG_WORDS!=='undefined'?HANG_WORDS:[])}; }catch(e){}
 try{ if(typeof module!=='undefined'&&module.exports)module.exports={Logic:Logic,GHOST_WORDS:GHOST_WORDS,LADDER_PUZZLES:LADDER_PUZZLES,TABOO_BANK:TABOO_BANK,CROSSWORDS:CROSSWORDS}; }catch(e){}
 </script>
 </body>

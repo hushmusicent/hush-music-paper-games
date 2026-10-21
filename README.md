@@ -37,6 +37,10 @@ browser/Android back) always asks **"Are you sure you want to quit?"** first.
 
 - **Accounts** — sign up / log in / log out / erase account. Demo mode stores
   accounts on this device (localStorage); each player gets a **player code**.
+- **Demo login** — a demo account is seeded automatically in demo mode:
+  username **demo**, password **demo1234** (player code DEMO42), plus a
+  **🎮 One-tap demo login** button on the login screen. It is created on
+  first run on each device and re-created if erased.
 - **Points** — 1,000 starting points, **+500 daily bonus** (claim button on Home
   and Profile), points for every PvC win, **per-game W / L / T + win-rate %** on Profile.
 - **Top 50 leaderboard** — seeded with 50 paper-themed rival bots plus you in demo
