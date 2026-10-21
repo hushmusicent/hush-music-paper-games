@@ -1,0 +1,7 @@
+{
+  "name": "Hush Music Paper Games",
+  "description": "15 classic pen & paper games including Dots & Boxes, Hangman, Sprouts, Ghost, Word Search, Sim, Taboo, and MASH with vs Computer, Pass & Play, and Online PvP.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
