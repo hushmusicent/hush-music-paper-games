@@ -23,7 +23,7 @@ const TIERS = [
   { name: 'Expert', dirs: 'All 8 directions' },
   { name: 'Master', dirs: 'All 8 directions, bigger grid' },
   { name: 'Grandmaster', dirs: 'All 8 directions, bigger grid' },
-  { name: 'Ultimate', dirs: 'All 8 directions, biggest grid' }
+  { name: 'Ultimate', dirs: 'All 8 directions · #1000 finale hides 100 words' }
 ];
 
 const tierOf = (id: number) => Math.floor((id - 1) / 100);
@@ -326,7 +326,8 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
 
   /* ---------- play screen ---------- */
   const tier = TIERS[tierOf(pz.id)];
-  const fontSize = pz.size >= 18 ? 10 : pz.size >= 15 ? 12 : pz.size >= 13 ? 13 : 15;
+  const huge = pz.size >= 25;
+  const fontSize = huge ? 12 : pz.size >= 20 ? 11 : pz.size >= 15 ? 12 : pz.size >= 13 ? 13 : 15;
   return (
     <div>
       <PaperPanel>
@@ -344,11 +345,13 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
 
         {errorMsg && <div className="err text-xs text-center">{errorMsg}</div>}
 
+        <div style={huge ? { overflowX: 'auto', paddingBottom: '6px' } : undefined}>
         <div
           className="wsgrid"
           style={{
             gridTemplateColumns: `repeat(${pz.size}, 1fr)`,
-            fontSize: `${fontSize}px`
+            fontSize: `${fontSize}px`,
+            minWidth: huge ? `${pz.size * 15}px` : undefined
           }}
         >
           {pz.grid.map((row, r) =>
@@ -367,6 +370,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
               );
             })
           )}
+        </div>
         </div>
 
         <div className="my-3 flex flex-wrap justify-center gap-1">
