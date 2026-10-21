@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { sproutsMid, sproutsLegal, sproutsApply, sproutsStartDots, pickA } from '../utils/logic';
+import { sproutsLegal, sproutsApply, sproutsStartDots, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
 
@@ -58,17 +58,17 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: d
 
     const a = state.sel;
     const b = i;
-    const mid = sproutsMid(state.dots[a], state.dots[b]);
-    const legal = sproutsLegal(state).some(
+    const found = sproutsLegal(state).find(
       ([x, y]) => x === Math.min(a, b) && y === Math.max(a, b)
     );
 
-    if (!legal) {
+    if (!found) {
       Sound.beep(300, 0.1, 'square');
       setErrorMsg('That move is not legal (dot full or line would cross).');
       setState(prev => ({ ...prev, sel: -1 }));
       return;
     }
+    const mid = found[2];
 
     Sound.click();
     const next = JSON.parse(JSON.stringify(state));

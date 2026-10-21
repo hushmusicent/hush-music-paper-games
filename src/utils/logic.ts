@@ -417,8 +417,8 @@ export const Logic = {
 
 /* --- Sprouts helpers --- */
 // Starting dot layouts for 3-20 dots on the 300x260 board.
-// 3 dots keeps the classic triangle; larger counts use a sunflower spread
-// so dots stay evenly spaced (and on the page) at every count.
+// 3 dots keeps the classic triangle; larger counts use a jittered grid so
+// dots are evenly spread with real space between them — never overlaid.
 export function sproutsStartDots(n: number): Array<{ x: number; y: number; deg: number }> {
   const count = Math.max(3, Math.min(20, Math.floor(n) || 3));
   if (count === 3) {
@@ -428,18 +428,24 @@ export function sproutsStartDots(n: number): Array<{ x: number; y: number; deg: 
       { x: 150, y: 45, deg: 0 }
     ];
   }
-  const cx = 150;
-  const cy = 128;
-  const RX = 126;
-  const RY = 98;
-  const GOLDEN = 2.399963; // golden angle, radians
+  const cols = Math.ceil(Math.sqrt(count * (300 / 260)));
+  const rows = Math.ceil(count / cols);
+  const cw = 300 / cols;
+  const ch = 260 / rows;
+  // small deterministic jitter (same layout every game for a given count)
+  const jit = (i: number, k: number) => {
+    const v = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
+    return (v - Math.floor(v) - 0.5) * 2;
+  };
+  const jx = Math.min(11, cw * 0.18);
+  const jy = Math.min(11, ch * 0.18);
   const pts: Array<{ x: number; y: number; deg: number }> = [];
   for (let i = 0; i < count; i++) {
-    const r = Math.sqrt((i + 0.5) / count);
-    const th = i * GOLDEN + 0.6;
+    const cx = (i % cols) * cw + cw / 2;
+    const cy = Math.floor(i / cols) * ch + ch / 2;
     pts.push({
-      x: Math.round(cx + RX * r * Math.cos(th)),
-      y: Math.round(cy + RY * r * Math.sin(th)),
+      x: Math.round(cx + jit(i, 1) * jx),
+      y: Math.round(cy + jit(i, 2) * jy),
       deg: 0
     });
   }
@@ -462,16 +468,28 @@ function segInt(
 
 export function sproutsMid(
   a: { x: number; y: number },
-  b: { x: number; y: number }
+  b: { x: number; y: number },
+  side: number = 1
 ): { x: number; y: number } {
+  const clampX = (x: number) => Math.max(16, Math.min(284, x));
+  const clampY = (y: number) => Math.max(16, Math.min(244, y));
+  if (a.x === b.x && a.y === b.y) {
+    // a proper Sprouts loop: a big teardrop out and back to the same dot
+    const lx = a.x <= 150 ? 62 : -62;
+    const ly = a.y <= 130 ? -62 : 62;
+    return { x: clampX(a.x + lx * side), y: clampY(a.y + ly) };
+  }
   const mx = (a.x + b.x) / 2;
   const my = (a.y + b.y) / 2;
-  if (a === b) return { x: Math.min(285, a.x + 42), y: Math.max(15, a.y - 42) };
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
-  const off = Math.min(26, len / 4);
-  return { x: mx - (dy / len) * off, y: my + (dx / len) * off };
+  // big sweeping bow, like pencil Sprouts: ~42% of the line length
+  const off = Math.max(16, Math.min(66, len * 0.42)) * side;
+  return {
+    x: clampX(mx - (dy / len) * off),
+    y: clampY(my + (dx / len) * off)
+  };
 }
 
 export function sproutsCrosses(
@@ -511,6 +529,13 @@ export function sproutsCrosses(
 
 export function sproutsLegal(S: any): Array<[number, number, { x: number; y: number }]> {
   const L: Array<[number, number, { x: number; y: number }]> = [];
+  // the new dot lands on the curve's apex — keep it clear of existing dots
+  // so dots never stack on top of each other
+  const midClear = (mid: { x: number; y: number }, a: number, b: number) =>
+    S.dots.every(
+      (d: { x: number; y: number }, i: number) =>
+        i === a || i === b || Math.hypot(d.x - mid.x, d.y - mid.y) >= 24
+    );
   for (let a = 0; a < S.dots.length; a++) {
     for (let b = a; b < S.dots.length; b++) {
       if (a === b) {
@@ -518,9 +543,14 @@ export function sproutsLegal(S: any): Array<[number, number, { x: number; y: num
       } else if (S.dots[a].deg >= 3 || S.dots[b].deg >= 3) {
         continue;
       }
-      const mid = sproutsMid(S.dots[a], S.dots[b]);
-      if (sproutsCrosses(S, a, b, mid)) continue;
-      L.push([a, b, mid]);
+      // try the bow on both sides of the line; take the first that fits
+      for (const side of [1, -1]) {
+        const mid = sproutsMid(S.dots[a], S.dots[b], side);
+        if (!midClear(mid, a, b)) continue;
+        if (sproutsCrosses(S, a, b, mid)) continue;
+        L.push([a, b, mid]);
+        break;
+      }
     }
   }
   return L;
