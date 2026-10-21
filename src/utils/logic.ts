@@ -21,6 +21,12 @@ export const shuffle = <T>(a: T[]): T[] => {
 
 export const Logic = {
   /* --- Dots and Boxes --- */
+  // Level 1-50 -> boxes per side: 2x2 at L1 growing to 10x10 at L50
+  // (dots per side = boxes + 1, so 3x3 dots up to 11x11 dots).
+  dotsBoxesForLevel(level: number) {
+    const L = Math.max(1, Math.min(50, Math.floor(level) || 1));
+    return 2 + Math.floor(((L - 1) * 8) / 49);
+  },
   dotsNew(n: number) {
     return {
       n,
