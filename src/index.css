@@ -241,8 +241,8 @@ body {
   background: #fff;
   border: 2px solid #9db9dc;
   border-radius: 8px;
-  font-size: 38px;
-  font-weight: 900;
+  font-size: 46px;
+  font-weight: 400;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -252,6 +252,22 @@ body {
 
 .tttcell.o {
   color: #c0392b;
+}
+
+/* Chalk-handwriting marks (X / O drawn like chalk) */
+.chalk-mark {
+  font-family: 'Schoolbell', 'Chalkboard SE', 'Comic Sans MS', cursive;
+  display: inline-block;
+  line-height: 1;
+  text-shadow:
+    0 0 1px currentColor,
+    1px 1px 1px rgba(0, 0, 0, 0.18),
+    -1px 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.chalk-inline {
+  font-family: 'Schoolbell', 'Chalkboard SE', 'Comic Sans MS', cursive;
+  font-size: 1.15em;
 }
 
 .chip {

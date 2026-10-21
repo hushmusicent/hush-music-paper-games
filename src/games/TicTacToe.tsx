@@ -97,18 +97,36 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish }) =
 
       <PaperPanel>
         <div className="grid grid-cols-3 gap-2 max-w-[280px] mx-auto my-3">
-          {board.map((cell, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleClick(idx)}
-              className={`tttcell ${cell === 'O' ? 'o' : ''}`}
-            >
-              {cell}
-            </div>
-          ))}
+          {board.map((cell, idx) => {
+            // slight hand-drawn tilt, different for every square
+            const tilt = [-5, 3, -2, 4, -3, 2, -4, 5, -1][idx];
+            return (
+              <div
+                key={idx}
+                onClick={() => handleClick(idx)}
+                className={`tttcell ${cell === 'O' ? 'o' : ''}`}
+              >
+                {cell && (
+                  <span
+                    className="chalk-mark"
+                    style={{ transform: `rotate(${tilt}deg)` }}
+                  >
+                    {cell}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
         <p className="muted text-center text-xs">
-          {names[0]} is ❌ · {names[1]} is ⭕
+          {names[0]} is{' '}
+          <span className="chalk-inline" style={{ color: '#17457e' }}>
+            X
+          </span>{' '}
+          · {names[1]} is{' '}
+          <span className="chalk-inline" style={{ color: '#c0392b' }}>
+            O
+          </span>
         </p>
       </PaperPanel>
     </div>

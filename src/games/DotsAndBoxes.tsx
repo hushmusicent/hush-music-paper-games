@@ -83,7 +83,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
   const X = (c: number) => PAD + c * SP;
   const Y = (r: number) => PAD + r * SP;
   const canTap = isMine && !state.over;
-  const marks = ['✕', '◯'];
+  const marks = ['X', 'O'];
 
   return (
     <div>
@@ -98,10 +98,13 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
       <PaperPanel>
         <div className="flex gap-2 mb-2" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
           <span className="chip">
-            ✕ {names[0]}: {state.scores[0]}
+            <span className="chalk-inline">X</span> {names[0]}: {state.scores[0]}
           </span>
           <span className="chip">
-            ◯ {names[1]}: {state.scores[1]}
+            <span className="chalk-inline" style={{ color: '#c0392b' }}>
+              O
+            </span>{' '}
+            {names[1]}: {state.scores[1]}
           </span>
           <span className="chip">
             🎚️ Level {level} · {cols}×{rows}
@@ -136,9 +139,12 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
                   y={Y(br) + SP / 2}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={SP * 0.52}
-                  fontWeight={800}
+                  fontSize={SP * 0.55}
                   fill={o === 1 ? '#1c64d8' : '#d84a35'}
+                  style={{
+                    fontFamily: "'Schoolbell', 'Chalkboard SE', 'Comic Sans MS', cursive"
+                  }}
+                  transform={`rotate(${((bi * 7) % 9) - 4} ${X(bc) + SP / 2} ${Y(br) + SP / 2})`}
                 >
                   {marks[o - 1]}
                 </text>
