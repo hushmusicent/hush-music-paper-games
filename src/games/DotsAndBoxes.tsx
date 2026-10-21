@@ -14,12 +14,13 @@ interface DotsAndBoxesProps {
 
 export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish, level: levelProp }) => {
   const level = Math.max(1, Math.min(50, levelProp || 1));
-  const [state, setState] = useState(() => Logic.dotsNew(Logic.dotsBoxesForLevel(level)));
+  const [state, setState] = useState(() => { const sz = Logic.dotsSizeForLevel(level); return Logic.dotsNew(sz.w, sz.h); });
 
   const cur = state.turn % names.length;
   const isMine = mode === 'pvc' ? cur === 0 : true;
-  const n = state.n;
-  const totalBoxes = n * n;
+  const cols = state.cols;
+  const rows = state.rows;
+  const totalBoxes = cols * rows;
 
   const afterMove = (newState: typeof state) => {
     if (newState.over) {
@@ -32,7 +33,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           title: winner === -1 ? 'Draw!' : `${names[winner]} wins!`,
           body: (
             <div className="msg">
-              Level {level} · {newState.n}×{newState.n} boxes — final: {names[0]}: {s0} ·{' '}
+              Level {level} · {newState.cols}×{newState.rows} boxes — final: {names[0]}: {s0} ·{' '}
               {names[1]}: {s1}.
             </div>
           )
@@ -76,7 +77,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
   /* ---------- the dot sheet (look: the printed Dots & Boxes pages) ---------- */
   const SP = 60; // spacing between dots
   const PAD = 34; // page margin
-  const W = PAD * 2 + SP * n;
+  const W = PAD * 2 + SP * cols;
+  const H = PAD * 2 + SP * rows;
   const dotR = Math.max(5, Math.round(SP * 0.115));
   const X = (c: number) => PAD + c * SP;
   const Y = (r: number) => PAD + r * SP;
@@ -102,7 +104,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
             ◯ {names[1]}: {state.scores[1]}
           </span>
           <span className="chip">
-            🎚️ Level {level} · {n}×{n}
+            🎚️ Level {level} · {cols}×{rows}
           </span>
           <span className="chip">
             {state.scores[0] + state.scores[1]}/{totalBoxes} boxes
@@ -110,7 +112,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
         </div>
 
         <svg
-          viewBox={`0 0 ${W} ${W}`}
+          viewBox={`0 0 ${W} ${H}`}
           style={{ width: '100%', height: 'auto', display: 'block' }}
           role="img"
           aria-label={`Dots and Boxes board, level ${level}`}
@@ -118,8 +120,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           {/* claimed boxes: light wash + the player's mark, like initials on paper */}
           {state.boxes.map((o, bi) => {
             if (!o) return null;
-            const br = Math.floor(bi / n);
-            const bc = bi % n;
+            const br = Math.floor(bi / cols);
+            const bc = bi % cols;
             return (
               <g key={'b' + bi}>
                 <rect
@@ -147,8 +149,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           {/* drawn lines: thick black ink, like a pen on the sheet */}
           {state.h.map((t, idx) => {
             if (!t) return null;
-            const r = Math.floor(idx / n);
-            const c = idx % n;
+            const r = Math.floor(idx / cols);
+            const c = idx % cols;
             return (
               <line
                 key={'hd' + idx}
@@ -164,8 +166,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           })}
           {state.v.map((t, idx) => {
             if (!t) return null;
-            const r = Math.floor(idx / (n + 1));
-            const c = idx % (n + 1);
+            const r = Math.floor(idx / (cols + 1));
+            const c = idx % (cols + 1);
             return (
               <line
                 key={'vd' + idx}
@@ -183,8 +185,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           {/* open gaps: faint pencil guide + fat invisible tap target */}
           {state.h.map((t, idx) => {
             if (t) return null;
-            const r = Math.floor(idx / n);
-            const c = idx % n;
+            const r = Math.floor(idx / cols);
+            const c = idx % cols;
             return (
               <g key={'hh' + idx}>
                 <line
@@ -210,8 +212,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           })}
           {state.v.map((t, idx) => {
             if (t) return null;
-            const r = Math.floor(idx / (n + 1));
-            const c = idx % (n + 1);
+            const r = Math.floor(idx / (cols + 1));
+            const c = idx % (cols + 1);
             return (
               <g key={'vh' + idx}>
                 <line
@@ -237,8 +239,8 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           })}
 
           {/* the dots: big and black, like the printed sheets */}
-          {Array.from({ length: n + 1 }).map((_, r) =>
-            Array.from({ length: n + 1 }).map((__, c) => (
+          {Array.from({ length: rows + 1 }).map((_, r) =>
+            Array.from({ length: cols + 1 }).map((__, c) => (
               <circle key={'d' + r + '-' + c} cx={X(c)} cy={Y(r)} r={dotR} fill="#111111" />
             ))
           )}

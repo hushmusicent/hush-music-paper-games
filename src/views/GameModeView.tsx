@@ -65,8 +65,9 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
   };
 
   if (isDots && step === 'level') {
-    const boxes = Logic.dotsBoxesForLevel(level);
-    const dotsSide = boxes + 1;
+    const sz = Logic.dotsSizeForLevel(level);
+    const dotsCols = sz.w + 1;
+    const dotsRows = sz.h + 1;
     return (
       <div className="space-y-3">
         <button
@@ -93,7 +94,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           </h3>
           <p className="text-center text-xs text-[#5a6a86] mb-3">
             {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Higher level = a
-            bigger sheet of dots. Level 1 starts at 2×2 boxes, Level 50 tops out at 10×10 boxes.
+            bigger sheet of dots — every level has more dots than the one before it. Level 1 starts at 2×2 boxes (9 dots), Level 50 tops out at 14×14 boxes (225 dots).
           </p>
 
           <div className="grid gap-1.5 mb-3" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
@@ -124,20 +125,20 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
 
           <div className="text-center mb-3">
             <span className="chip">
-              Level {level} · {boxes}×{boxes} boxes · {dotsSide}×{dotsSide} dots (
-              {dotsSide * dotsSide} dots)
+              Level {level} · {sz.w}×{sz.h} boxes · {dotsCols}×{dotsRows} dots ({sz.dots} dots)
             </span>
           </div>
 
           <div className="flex justify-center mb-3">
             <svg
-              width={Math.min(180, dotsSide * 18)}
-              height={Math.min(180, dotsSide * 18)}
-              viewBox={`0 0 ${dotsSide * 18} ${dotsSide * 18}`}
+              width={dotsCols * 14}
+              height={dotsRows * 14}
+              viewBox={`0 0 ${dotsCols * 14} ${dotsRows * 14}`}
+              style={{ maxWidth: '230px', height: 'auto' }}
             >
-              {Array.from({ length: dotsSide }).map((_, r) =>
-                Array.from({ length: dotsSide }).map((__, c) => (
-                  <circle key={`${r}-${c}`} cx={9 + c * 18} cy={9 + r * 18} r={2.6} fill="#111" />
+              {Array.from({ length: dotsRows }).map((_, r) =>
+                Array.from({ length: dotsCols }).map((__, c) => (
+                  <circle key={`${r}-${c}`} cx={7 + c * 14} cy={7 + r * 14} r={2.4} fill="#111" />
                 ))
               )}
             </svg>

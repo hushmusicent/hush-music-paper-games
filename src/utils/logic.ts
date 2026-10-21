@@ -21,53 +21,68 @@ export const shuffle = <T>(a: T[]): T[] => {
 
 export const Logic = {
   /* --- Dots and Boxes --- */
-  // Level 1-50 -> boxes per side: 2x2 at L1 growing to 10x10 at L50
-  // (dots per side = boxes + 1, so 3x3 dots up to 11x11 dots).
-  dotsBoxesForLevel(level: number) {
+  // One grid size per level (boxes: cols x rows). EVERY level has more dots
+  // than the level before it — dot count (cols+1)*(rows+1) strictly rises
+  // from 9 dots at Level 1 (2x2) to 225 dots at Level 50 (14x14).
+  DOTS_LEVELS: [
+    [2, 2], [2, 3], [3, 3], [3, 4], [3, 5],
+    [4, 4], [4, 5], [4, 6], [5, 5], [5, 6],
+    [5, 7], [6, 6], [5, 8], [6, 7], [5, 9],
+    [6, 8], [7, 7], [6, 9], [7, 8], [6, 10],
+    [7, 9], [8, 8], [7, 10], [8, 9], [7, 11],
+    [9, 9], [7, 12], [8, 11], [9, 10], [8, 12],
+    [9, 11], [10, 10], [8, 13], [9, 12], [10, 11],
+    [8, 14], [9, 13], [10, 12], [11, 11], [9, 14],
+    [10, 13], [10, 14], [11, 13], [12, 12], [11, 14],
+    [12, 13], [12, 14], [13, 13], [13, 14], [14, 14]
+  ] as Array<[number, number]>,
+  dotsSizeForLevel(level: number) {
     const L = Math.max(1, Math.min(50, Math.floor(level) || 1));
-    return 2 + Math.floor(((L - 1) * 8) / 49);
+    const [w, h] = this.DOTS_LEVELS[L - 1];
+    return { w, h, dots: (w + 1) * (h + 1), boxes: w * h };
   },
-  dotsNew(n: number) {
+  dotsNew(cols: number, rows: number) {
     return {
-      n,
-      h: Array((n + 1) * n).fill(0),
-      v: Array(n * (n + 1)).fill(0),
-      boxes: Array(n * n).fill(0),
+      cols,
+      rows,
+      h: Array((rows + 1) * cols).fill(0),
+      v: Array(rows * (cols + 1)).fill(0),
+      boxes: Array(cols * rows).fill(0),
       turn: 0,
       over: false,
       scores: [0, 0] as [number, number]
     };
   },
-  dotsEdgeIdx(kind: 'h' | 'v', r: number, c: number, n: number) {
-    return kind === 'h' ? r * n + c : r * (n + 1) + c;
+  dotsEdgeIdx(kind: 'h' | 'v', r: number, c: number, S: any) {
+    return kind === 'h' ? r * S.cols + c : r * (S.cols + 1) + c;
   },
-  dotsBoxesForEdge(kind: 'h' | 'v', r: number, c: number, n: number): number[] {
+  dotsBoxesForEdge(kind: 'h' | 'v', r: number, c: number, S: any): number[] {
     const out: number[] = [];
     if (kind === 'h') {
-      if (r > 0) out.push((r - 1) * n + c);
-      if (r < n) out.push(r * n + c);
+      if (r > 0) out.push((r - 1) * S.cols + c);
+      if (r < S.rows) out.push(r * S.cols + c);
     } else {
-      if (c > 0) out.push(r * n + (c - 1));
-      if (c < n) out.push(r * n + c);
+      if (c > 0) out.push(r * S.cols + (c - 1));
+      if (c < S.cols) out.push(r * S.cols + c);
     }
     return out;
   },
-  dotsBoxEdges(bi: number, n: number): Array<['h' | 'v', number, number]> {
-    const r = Math.floor(bi / n);
-    const c = bi % n;
+  dotsBoxEdges(S: any, bi: number): Array<['h' | 'v', number, number]> {
+    const r = Math.floor(bi / S.cols);
+    const c = bi % S.cols;
     return [['h', r, c], ['h', r + 1, c], ['v', r, c], ['v', r, c + 1]];
   },
   dotsBoxComplete(S: any, bi: number) {
-    return this.dotsBoxEdges(bi, S.n).every(
-      ([k, r, c]) => S[k][this.dotsEdgeIdx(k, r, c, S.n)] !== 0
+    return this.dotsBoxEdges(S, bi).every(
+      ([k, r, c]) => S[k][this.dotsEdgeIdx(k, r, c, S)] !== 0
     );
   },
   dotsApply(S: any, kind: 'h' | 'v', r: number, c: number, player: number) {
-    const idx = this.dotsEdgeIdx(kind, r, c, S.n);
+    const idx = this.dotsEdgeIdx(kind, r, c, S);
     if (S[kind][idx]) return { ok: false, claimed: 0, extra: false };
     S[kind][idx] = player + 1;
     let claimed = 0;
-    for (const bi of this.dotsBoxesForEdge(kind, r, c, S.n)) {
+    for (const bi of this.dotsBoxesForEdge(kind, r, c, S)) {
       if (!S.boxes[bi] && this.dotsBoxComplete(S, bi)) {
         S.boxes[bi] = player + 1;
         claimed++;
@@ -75,19 +90,19 @@ export const Logic = {
       }
     }
     const total = S.boxes.filter(Boolean).length;
-    if (total === S.n * S.n) S.over = true;
+    if (total === S.cols * S.rows) S.over = true;
     return { ok: true, claimed, extra: claimed > 0 };
   },
   dotsLegal(S: any): Array<['h' | 'v', number, number]> {
     const L: Array<['h' | 'v', number, number]> = [];
-    for (let r = 0; r <= S.n; r++) {
-      for (let c = 0; c < S.n; c++) {
-        if (!S.h[r * S.n + c]) L.push(['h', r, c]);
+    for (let r = 0; r <= S.rows; r++) {
+      for (let c = 0; c < S.cols; c++) {
+        if (!S.h[r * S.cols + c]) L.push(['h', r, c]);
       }
     }
-    for (let r = 0; r < S.n; r++) {
-      for (let c = 0; c <= S.n; c++) {
-        if (!S.v[r * (S.n + 1) + c]) L.push(['v', r, c]);
+    for (let r = 0; r < S.rows; r++) {
+      for (let c = 0; c <= S.cols; c++) {
+        if (!S.v[r * (S.cols + 1) + c]) L.push(['v', r, c]);
       }
     }
     return L;
@@ -103,9 +118,9 @@ export const Logic = {
     const safe = legal.filter(([k, r, c]) => {
       const t = JSON.parse(JSON.stringify(S));
       this.dotsApply(t, k, r, c, 1);
-      return !this.dotsBoxesForEdge(k, r, c, S.n).some(bi => {
-        const filled = this.dotsBoxEdges(bi, S.n).filter(
-          ([ek, er, ec]) => t[ek][this.dotsEdgeIdx(ek, er, ec, S.n)]
+      return !this.dotsBoxesForEdge(k, r, c, S).some(bi => {
+        const filled = this.dotsBoxEdges(S, bi).filter(
+          ([ek, er, ec]) => t[ek][this.dotsEdgeIdx(ek, er, ec, S)]
         ).length;
         return filled === 3 && !t.boxes[bi];
       });
