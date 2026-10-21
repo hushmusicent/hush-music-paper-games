@@ -50,7 +50,7 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     p: [2, 2],
     payout: PAYOUTS.sim,
     rules:
-      'Six dots sit in a hexagon. Players take turns drawing a line between two dots IN THEIR OWN COLOR (you are blue, the other player is red). If you complete a triangle whose three sides are ALL YOUR OWN color, YOU lose on the spot. Last player standing wins.'
+      'Before the game you pick 6 to 10 dots and a board shape: Ring, Grid or Scatter. Players take turns drawing a line between two dots IN THEIR OWN COLOR (you are blue, the other player is red). If you complete a triangle whose three sides are ALL YOUR OWN color, YOU lose on the spot. Last player standing wins.'
   },
   bulls: {
     id: 'bulls',

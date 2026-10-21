@@ -32,6 +32,8 @@ interface GameActiveViewProps {
   dotsLevel?: number;
   hangLevel?: number;
   sproutsDots?: number;
+  simDots?: number;
+  simShape?: 'ring' | 'grid' | 'scatter';
   onQuit: () => void;
   onPointsUpdated: () => void;
 }
@@ -44,6 +46,8 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   dotsLevel,
   hangLevel,
   sproutsDots,
+  simDots,
+  simShape,
   onQuit,
   onPointsUpdated
 }) => {
@@ -118,7 +122,15 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
           <Sprouts mode={mode} names={names} onFinish={handleFinish} dots={sproutsDots} />
         );
       case 'sim':
-        return <SimGame mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <SimGame
+            mode={mode}
+            names={names}
+            onFinish={handleFinish}
+            dots={simDots}
+            shape={simShape}
+          />
+        );
       case 'bulls':
         return <BullsAndCows mode={mode} names={names} onFinish={handleFinish} />;
       case 'categories':

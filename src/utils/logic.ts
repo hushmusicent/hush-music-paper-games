@@ -415,6 +415,72 @@ export const Logic = {
   }
 };
 
+/* --- Sim board layouts --- */
+export type SimShape = 'ring' | 'grid' | 'scatter';
+
+// Dot positions for Sim on the 300x260 board, for 6-10 dots in 3 shapes.
+// Ring at 6 dots is the classic hexagon, exactly as the game shipped.
+export function simPositions(n: number, shape: SimShape): Array<[number, number]> {
+  const count = Math.max(6, Math.min(10, Math.floor(n) || 6));
+  if (shape === 'ring') {
+    if (count === 6) {
+      return [
+        [150, 25],
+        [245, 77],
+        [245, 182],
+        [150, 235],
+        [55, 182],
+        [55, 77]
+      ];
+    }
+    const pts: Array<[number, number]> = [];
+    for (let i = 0; i < count; i++) {
+      const th = -Math.PI / 2 + (i * 2 * Math.PI) / count;
+      pts.push([
+        Math.round(150 + 106 * Math.cos(th)),
+        Math.round(130 + 102 * Math.sin(th))
+      ]);
+    }
+    return pts;
+  }
+  if (shape === 'grid') {
+    const cols = Math.ceil(Math.sqrt(count * (230 / 190)));
+    const rows = Math.ceil(count / cols);
+    const pts: Array<[number, number]> = [];
+    for (let i = 0; i < count; i++) {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      pts.push([
+        Math.round(35 + ((c + 0.5) * 230) / cols),
+        Math.round(35 + ((r + 0.5) * 190) / rows)
+      ]);
+    }
+    return pts;
+  }
+  // scatter: seeded random placement with a minimum gap, same board every
+  // time for a given count (and always matching the option-screen preview)
+  let seed = 1234567 + count * 99991;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const pts: Array<[number, number]> = [];
+  let minDist = 56;
+  while (pts.length < count) {
+    let placed = false;
+    for (let tries = 0; tries < 500 && !placed; tries++) {
+      const x = Math.round(34 + rnd() * 232);
+      const y = Math.round(34 + rnd() * 192);
+      if (pts.every(([px, py]) => Math.hypot(px - x, py - y) >= minDist)) {
+        pts.push([x, y]);
+        placed = true;
+      }
+    }
+    if (!placed) minDist -= 6; // relax and keep going; still well spaced
+  }
+  return pts;
+}
+
 /* --- Sprouts helpers --- */
 // Starting dot layouts for 3-20 dots on the 300x260 board.
 // 3 dots keeps the classic triangle; larger counts use a jittered grid so

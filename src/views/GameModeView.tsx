@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GameId, GameMode } from '../types';
 import { GAMES_METADATA } from '../data/games';
-import { Logic, sproutsStartDots } from '../utils/logic';
+import { Logic, sproutsStartDots, simPositions, SimShape } from '../utils/logic';
 import { HANG_LEVELS } from '../data/words';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -15,11 +15,14 @@ interface GameModeViewProps {
   onDotsLevel?: (level: number) => void;
   onHangLevel?: (level: number) => void;
   onSproutsDots?: (dots: number) => void;
+  onSimSetup?: (dots: number, shape: SimShape) => void;
 }
 
 const LEVEL_KEY = 'pg_dots_level';
 const HANG_LEVEL_KEY = 'pg_hang_level';
 const SPR_DOTS_KEY = 'pg_sprouts_dots';
+const SIM_DOTS_KEY = 'pg_sim_dots';
+const SIM_SHAPE_KEY = 'pg_sim_shape';
 
 function savedLevel(): number {
   try {
@@ -27,6 +30,24 @@ function savedLevel(): number {
     return v >= 1 && v <= 50 ? v : 1;
   } catch (e) {
     return 1;
+  }
+}
+
+function savedSimDots(): number {
+  try {
+    const v = parseInt(localStorage.getItem(SIM_DOTS_KEY) || '6', 10);
+    return v >= 6 && v <= 10 ? v : 6;
+  } catch (e) {
+    return 6;
+  }
+}
+
+function savedSimShape(): SimShape {
+  try {
+    const v = localStorage.getItem(SIM_SHAPE_KEY);
+    return v === 'grid' || v === 'scatter' ? v : 'ring';
+  } catch (e) {
+    return 'ring';
   }
 }
 
@@ -56,13 +77,15 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
   onOnlineLobby,
   onDotsLevel,
   onHangLevel,
-  onSproutsDots
+  onSproutsDots,
+  onSimSetup
 }) => {
   const g = GAMES_METADATA[gameId];
   const [pmin, pmax] = g.p;
   const isDots = gameId === 'dots';
   const isHang = gameId === 'hangman';
   const isSpr = gameId === 'sprouts';
+  const isSim = gameId === 'sim';
 
   // Dots and Boxes only: mode first, then a level selection screen,
   // and only then does the game start (level picked BEFORE play).
@@ -71,16 +94,29 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
   const [level, setLevel] = useState<number>(() => savedLevel());
   const [hangLevel, setHangLevel] = useState<number>(() => savedHangLevel());
   const [sprDots, setSprDots] = useState<number>(() => savedSprDots());
+  const [simDots, setSimDots] = useState<number>(() => savedSimDots());
+  const [simShape, setSimShape] = useState<SimShape>(() => savedSimShape());
 
   const chooseMode = (mode: GameMode) => {
     Sound.click();
-    if (isDots || isHang || isSpr) {
+    if (isDots || isHang || isSpr || isSim) {
       setPendingMode(mode);
       setStep('level');
       return;
     }
     if (mode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(mode);
+  };
+
+  const startSim = () => {
+    try {
+      localStorage.setItem(SIM_DOTS_KEY, String(simDots));
+      localStorage.setItem(SIM_SHAPE_KEY, simShape);
+    } catch (e) {}
+    if (onSimSetup) onSimSetup(simDots, simShape);
+    Sound.click();
+    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    else onSelectMode(pendingMode);
   };
 
   const startSpr = () => {
@@ -112,6 +148,118 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
+
+  if (isSim && step === 'level') {
+    const preview = simPositions(simDots, simShape);
+    const shapeLabel = simShape === 'ring' ? 'Ring' : simShape === 'grid' ? 'Grid' : 'Scatter';
+    const shapeBtn = (id: SimShape, label: string) => {
+      const sel = simShape === id;
+      return (
+        <button
+          key={id}
+          onClick={() => {
+            setSimShape(id);
+            Sound.click();
+          }}
+          className="rounded-lg font-bold cursor-pointer flex-1"
+          style={{
+            padding: '10px 0',
+            fontSize: '14px',
+            border: sel ? '2px solid #1c64d8' : '1px solid #b9c8de',
+            background: sel ? '#1c64d8' : '#ffffff',
+            color: sel ? '#ffffff' : '#22304a'
+          }}
+        >
+          {label}
+        </button>
+      );
+    };
+    return (
+      <div className="space-y-3">
+        <button
+          onClick={() => {
+            Sound.click();
+            setStep('mode');
+          }}
+          className="btn secondary small"
+        >
+          ← Change mode
+        </button>
+
+        <h2 className="text-xl font-bold text-[var(--ink2)] flex items-center gap-2">
+          <span>{g.icon}</span>
+          <span>{g.name} — set up your board</span>
+        </h2>
+
+        <PaperPanel>
+          <h3
+            className="text-center font-black tracking-wide text-[#22304a]"
+            style={{ fontSize: '22px', letterSpacing: '2px' }}
+          >
+            SIM
+          </h3>
+          <p className="text-center text-xs text-[#5a6a86] mb-3">
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Pick 6 to 10
+            dots and a board shape.
+          </p>
+
+          <p className="text-xs font-bold text-[#5a6a86] mb-1">DOTS</p>
+          <div className="flex gap-1.5 mb-3">
+            {[6, 7, 8, 9, 10].map(n => {
+              const sel = n === simDots;
+              return (
+                <button
+                  key={n}
+                  onClick={() => {
+                    setSimDots(n);
+                    Sound.click();
+                  }}
+                  className="rounded-lg font-bold cursor-pointer flex-1"
+                  style={{
+                    padding: '9px 0',
+                    fontSize: '14px',
+                    border: sel ? '2px solid #1c64d8' : '1px solid #b9c8de',
+                    background: sel ? '#1c64d8' : '#ffffff',
+                    color: sel ? '#ffffff' : '#22304a'
+                  }}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-xs font-bold text-[#5a6a86] mb-1">BOARD SHAPE</p>
+          <div className="flex gap-1.5 mb-3">
+            {shapeBtn('ring', '⬡ Ring')}
+            {shapeBtn('grid', '▦ Grid')}
+            {shapeBtn('scatter', '✦ Scatter')}
+          </div>
+
+          <div className="text-center mb-2">
+            <span className="chip">
+              ⬡ {simDots} dots · {shapeLabel} · {(simDots * (simDots - 1)) / 2} possible lines
+            </span>
+          </div>
+
+          <div className="flex justify-center mb-3">
+            <svg width={210} height={182} viewBox="0 0 300 260">
+              {preview.map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r={8} fill="#fffdf4" stroke="#22304a" strokeWidth={2} />
+              ))}
+            </svg>
+          </div>
+
+          <button onClick={startSim} className="btn">
+            ▶ Start · {simDots} dots · {shapeLabel}
+          </button>
+          <p className="muted text-center mt-2 text-xs">
+            Draw lines in your color — complete a triangle in YOUR color and you lose!
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
 
   if (isSpr && step === 'level') {
     const preview = sproutsStartDots(sprDots);

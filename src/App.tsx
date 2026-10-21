@@ -38,6 +38,8 @@ export const App: React.FC = () => {
   const [dotsLevel, setDotsLevel] = useState<number>(1);
   const [hangLevel, setHangLevel] = useState<number>(1);
   const [sproutsDots, setSproutsDots] = useState<number>(3);
+  const [simDots, setSimDots] = useState<number>(6);
+  const [simShape, setSimShape] = useState<'ring' | 'grid' | 'scatter'>('ring');
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -137,6 +139,10 @@ export const App: React.FC = () => {
             onDotsLevel={setDotsLevel}
             onHangLevel={setHangLevel}
             onSproutsDots={setSproutsDots}
+            onSimSetup={(d, s) => {
+              setSimDots(d);
+              setSimShape(s);
+            }}
           />
         )}
 
@@ -149,6 +155,8 @@ export const App: React.FC = () => {
             dotsLevel={dotsLevel}
             hangLevel={hangLevel}
             sproutsDots={sproutsDots}
+            simDots={simDots}
+            simShape={simShape}
             onQuit={() => {
               setCurrentView('game_mode');
               setRoomCode(undefined);

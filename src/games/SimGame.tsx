@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { Logic, pickA } from '../utils/logic';
+import { Logic, pickA, simPositions, SimShape } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
 
@@ -8,18 +8,22 @@ interface SimGameProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Chosen on the option screen BEFORE the game starts.
+  dots?: number;
+  shape?: SimShape;
 }
 
-const SIM_POS = [
-  [150, 25],
-  [245, 77],
-  [245, 182],
-  [150, 235],
-  [55, 182],
-  [55, 77]
-];
+const SHAPE_LABEL: Record<SimShape, string> = {
+  ring: 'Ring',
+  grid: 'Grid',
+  scatter: 'Scatter'
+};
 
-export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
+export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, shape }) => {
+  const count = Math.max(6, Math.min(10, dots || 6));
+  const boardShape: SimShape = shape || 'ring';
+  const POS = simPositions(count, boardShape);
+  const totalPairs = (count * (count - 1)) / 2;
   const [turn, setTurn] = useState<number>(0);
   const [over, setOver] = useState<boolean>(false);
   const [sel, setSel] = useState<number>(-1);
@@ -51,7 +55,7 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
       return true;
     }
 
-    const freeCount = 15 - Object.keys(currentEdges).length;
+    const freeCount = totalPairs - Object.keys(currentEdges).length;
     if (freeCount === 0) {
       setOver(true);
       setTimeout(() => {
@@ -60,7 +64,7 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
           title: `${names[lastSeat]} wins!`,
           body: (
             <div className="msg">
-              The hexagon is full — {names[1 - lastSeat]} has no move and loses.
+              The board is full — {names[1 - lastSeat]} has no move and loses.
             </div>
           )
         });
@@ -99,8 +103,8 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
       setTimeout(() => {
         setEdges(prevEdges => {
           const free: Array<[number, number]> = [];
-          for (let x = 0; x < 6; x++) {
-            for (let y = x + 1; y < 6; y++) {
+          for (let x = 0; x < count; x++) {
+            for (let y = x + 1; y < count; y++) {
               if (prevEdges[`${x}-${y}`] == null) free.push([x, y]);
             }
           }
@@ -133,6 +137,11 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
       </div>
 
       <PaperPanel>
+        <div className="text-center mb-1">
+          <span className="chip">
+            ⬡ {count} dots · {SHAPE_LABEL[boardShape]}
+          </span>
+        </div>
         <svg viewBox="0 0 300 260" className="w-full h-auto max-h-[300px] block mx-auto">
           {Object.keys(edges).map(k => {
             const [a, b] = k.split('-').map(Number);
@@ -140,17 +149,17 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish }) => {
             return (
               <line
                 key={k}
-                x1={SIM_POS[a][0]}
-                y1={SIM_POS[a][1]}
-                x2={SIM_POS[b][0]}
-                y2={SIM_POS[b][1]}
+                x1={POS[a][0]}
+                y1={POS[a][1]}
+                x2={POS[b][0]}
+                y2={POS[b][1]}
                 stroke={p === 0 ? '#2470c9' : '#c0392b'}
                 strokeWidth="4"
               />
             );
           })}
 
-          {SIM_POS.map((p, i) => (
+          {POS.map((p, i) => (
             <g
               key={i}
               onClick={() => handleDotClick(i)}
