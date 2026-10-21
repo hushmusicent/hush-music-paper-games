@@ -8,38 +8,18 @@ interface DotsAndBoxesProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Chosen on the level selection screen (GameModeView) BEFORE the game starts.
+  level?: number;
 }
 
-const LEVEL_KEY = 'pg_dots_level';
-
-function savedLevel(): number {
-  try {
-    const v = parseInt(localStorage.getItem(LEVEL_KEY) || '1', 10);
-    return v >= 1 && v <= 50 ? v : 1;
-  } catch (e) {
-    return 1;
-  }
-}
-
-export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish }) => {
-  const [phase, setPhase] = useState<'pick' | 'play'>('pick');
-  const [level, setLevel] = useState<number>(() => savedLevel());
-  const [state, setState] = useState(() => Logic.dotsNew(Logic.dotsBoxesForLevel(savedLevel())));
+export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish, level: levelProp }) => {
+  const level = Math.max(1, Math.min(50, levelProp || 1));
+  const [state, setState] = useState(() => Logic.dotsNew(Logic.dotsBoxesForLevel(level)));
 
   const cur = state.turn % names.length;
   const isMine = mode === 'pvc' ? cur === 0 : true;
   const n = state.n;
   const totalBoxes = n * n;
-
-  const startGame = (lv: number) => {
-    try {
-      localStorage.setItem(LEVEL_KEY, String(lv));
-    } catch (e) {}
-    setLevel(lv);
-    setState(Logic.dotsNew(Logic.dotsBoxesForLevel(lv)));
-    setPhase('play');
-    Sound.click();
-  };
 
   const afterMove = (newState: typeof state) => {
     if (newState.over) {
@@ -81,7 +61,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
   };
 
   const handleEdgeClick = (kind: 'h' | 'v', r: number, c: number) => {
-    if (phase !== 'play' || !isMine || state.over) return;
+    if (!isMine || state.over) return;
     const next = JSON.parse(JSON.stringify(state));
     const res = Logic.dotsApply(next, kind, r, c, cur);
     if (!res.ok) return;
@@ -92,87 +72,6 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
     setState(next);
     afterMove(next);
   };
-
-  /* ---------- level picker (before the game starts) ---------- */
-  if (phase === 'pick') {
-    const boxes = Logic.dotsBoxesForLevel(level);
-    const dotsSide = boxes + 1;
-    return (
-      <div>
-        <div className="turn-banner">🎚️ Dots and Boxes — pick your level</div>
-        <PaperPanel>
-          <h3
-            className="text-center font-black tracking-wide text-[#22304a]"
-            style={{ fontSize: '22px', letterSpacing: '2px' }}
-          >
-            DOTS &amp; BOXES
-          </h3>
-          <p className="text-center text-xs text-[#5a6a86] mb-3">
-            Higher level = a bigger sheet of dots. Level 1 starts at {2}×{2} boxes, Level 50
-            tops out at 10×10 boxes.
-          </p>
-
-          <div
-            className="grid gap-1.5 mb-3"
-            style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}
-          >
-            {Array.from({ length: 50 }).map((_, i) => {
-              const lv = i + 1;
-              const sel = lv === level;
-              return (
-                <button
-                  key={lv}
-                  onClick={() => {
-                    setLevel(lv);
-                    Sound.click();
-                  }}
-                  className="rounded-lg font-bold cursor-pointer"
-                  style={{
-                    padding: '7px 0',
-                    fontSize: '13px',
-                    border: sel ? '2px solid #1c64d8' : '1px solid #b9c8de',
-                    background: sel ? '#1c64d8' : '#ffffff',
-                    color: sel ? '#ffffff' : '#22304a'
-                  }}
-                >
-                  {lv}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="text-center mb-3">
-            <span className="chip">
-              Level {level} · {boxes}×{boxes} boxes · {dotsSide}×{dotsSide} dots ({dotsSide * dotsSide} dots)
-            </span>
-          </div>
-
-          {/* mini dot-sheet preview, like the printed sheets */}
-          <div className="flex justify-center mb-3">
-            <svg
-              width={Math.min(180, dotsSide * 18)}
-              height={Math.min(180, dotsSide * 18)}
-              viewBox={`0 0 ${dotsSide * 18} ${dotsSide * 18}`}
-            >
-              {Array.from({ length: dotsSide }).map((_, r) =>
-                Array.from({ length: dotsSide }).map((__, c) => (
-                  <circle key={`${r}-${c}`} cx={9 + c * 18} cy={9 + r * 18} r={2.6} fill="#111" />
-                ))
-              )}
-            </svg>
-          </div>
-
-          <button onClick={() => startGame(level)} className="btn">
-            ▶ Start Level {level}
-          </button>
-          <p className="muted text-center mt-2 text-xs">
-            Tap a gap between 2 dots to draw a line. Complete the fourth side of a box to claim
-            it with your mark — and go again!
-          </p>
-        </PaperPanel>
-      </div>
-    );
-  }
 
   /* ---------- the dot sheet (look: the printed Dots & Boxes pages) ---------- */
   const SP = 60; // spacing between dots
@@ -348,15 +247,6 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
         <p className="muted text-center mt-2 text-xs">
           Tap a gap between dots to draw your line. Complete a box to go again!
         </p>
-        <div className="text-center">
-          <button
-            onClick={() => setPhase('pick')}
-            className="btn secondary small"
-            style={{ marginTop: '4px' }}
-          >
-            🎚️ Change level (restart)
-          </button>
-        </div>
       </PaperPanel>
     </div>
   );

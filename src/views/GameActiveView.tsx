@@ -29,6 +29,7 @@ interface GameActiveViewProps {
   mode: GameMode;
   user: User;
   roomCode?: string;
+  dotsLevel?: number;
   onQuit: () => void;
   onPointsUpdated: () => void;
 }
@@ -38,6 +39,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   mode,
   user,
   roomCode,
+  dotsLevel,
   onQuit,
   onPointsUpdated
 }) => {
@@ -98,7 +100,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   const renderGame = () => {
     switch (gameId) {
       case 'dots':
-        return <DotsAndBoxes mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <DotsAndBoxes mode={mode} names={names} onFinish={handleFinish} level={dotsLevel} />
+        );
       case 'ttt':
         return <TicTacToe mode={mode} names={names} onFinish={handleFinish} />;
       case 'hangman':
