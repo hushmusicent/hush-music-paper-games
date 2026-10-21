@@ -96,11 +96,11 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     id: 'crossword',
     name: 'Crosswords',
     icon: '🔡✏️',
-    desc: 'Fill the grid from the clues',
+    desc: '1,000 real crosswords — track your finishes',
     p: [1, 2],
     payout: PAYOUTS.crossword,
     rules:
-      'Fill the interlocking grid so every Across and Down answer fits its clue and shares its crossing letters. Every square belongs to the puzzle. Use Check to mark right and wrong letters, or Reveal if you are stuck. Finish the whole grid correctly to win.'
+      'Real newspaper-style crosswords: 1,000 interlocking puzzles (8×8 and 9×9) where every letter is crossed by an Across and a Down answer. The checklist screen tracks you — finished puzzles earn a ✔️ and the count is saved on your device. Tap a square to pick its word (tap again to switch Across/Down), type letters, and use Check to mark right and wrong squares. Stuck? The answers are printed at the bottom of the puzzle, upside down, just like in the newspaper — flip your phone if you must peek! Revealing the answers finishes the round without checklist credit; solve the whole grid yourself to earn the ✔️ and the points.'
   },
   wordsearch: {
     id: 'wordsearch',
