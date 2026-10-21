@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { HANG_WORDS } from '../data/words';
+import { HANG_LEVELS } from '../data/words';
 import { Logic, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -9,10 +9,13 @@ interface HangmanProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Chosen on the level selection screen (GameModeView) BEFORE the game starts.
+  level?: number;
 }
 
-export const Hangman: React.FC<HangmanProps> = ({ mode, names, onFinish }) => {
-  const [word] = useState(() => pickA(HANG_WORDS));
+export const Hangman: React.FC<HangmanProps> = ({ mode, names, onFinish, level: levelProp }) => {
+  const level = Math.max(1, Math.min(10, levelProp || 1));
+  const [word] = useState(() => pickA(HANG_LEVELS[level - 1]));
   const [guessed, setGuessed] = useState<string[]>([]);
   const [turn, setTurn] = useState<number>(0);
   const [over, setOver] = useState<boolean>(false);
@@ -109,6 +112,9 @@ export const Hangman: React.FC<HangmanProps> = ({ mode, names, onFinish }) => {
       </div>
 
       <PaperPanel>
+        <div className="text-center mb-1">
+          <span className="chip">🎚️ Level {level} · 300 words</span>
+        </div>
         <svg viewBox="0 0 140 150" className="w-[170px] block mx-auto my-2">
           {parts.slice(0, Math.min(wrong, parts.length))}
         </svg>

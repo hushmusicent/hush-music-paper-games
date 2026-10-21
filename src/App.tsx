@@ -36,6 +36,7 @@ export const App: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState<GameId | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('pvc');
   const [dotsLevel, setDotsLevel] = useState<number>(1);
+  const [hangLevel, setHangLevel] = useState<number>(1);
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -133,6 +134,7 @@ export const App: React.FC = () => {
             onBrowseRooms={() => setCurrentView('rooms')}
             onOnlineLobby={() => setCurrentView('lobby')}
             onDotsLevel={setDotsLevel}
+            onHangLevel={setHangLevel}
           />
         )}
 
@@ -143,6 +145,7 @@ export const App: React.FC = () => {
             user={user}
             roomCode={roomCode}
             dotsLevel={dotsLevel}
+            hangLevel={hangLevel}
             onQuit={() => {
               setCurrentView('game_mode');
               setRoomCode(undefined);

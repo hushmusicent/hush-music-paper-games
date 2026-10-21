@@ -30,6 +30,7 @@ interface GameActiveViewProps {
   user: User;
   roomCode?: string;
   dotsLevel?: number;
+  hangLevel?: number;
   onQuit: () => void;
   onPointsUpdated: () => void;
 }
@@ -40,6 +41,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   user,
   roomCode,
   dotsLevel,
+  hangLevel,
   onQuit,
   onPointsUpdated
 }) => {
@@ -106,7 +108,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       case 'ttt':
         return <TicTacToe mode={mode} names={names} onFinish={handleFinish} />;
       case 'hangman':
-        return <Hangman mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <Hangman mode={mode} names={names} onFinish={handleFinish} level={hangLevel} />
+        );
       case 'sprouts':
         return <Sprouts mode={mode} names={names} onFinish={handleFinish} />;
       case 'sim':
