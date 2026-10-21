@@ -76,11 +76,11 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     id: 'mash',
     name: 'MASH',
     icon: '🔮✏️',
-    desc: 'Mansion, Apartment, Shack, House…',
+    desc: 'Pick Love, Work, Money… the spirits decide',
     p: [1, 4],
     payout: PAYOUTS.mash,
     rules:
-      'The classic fortune-telling game. Write FOUR options in every category (home, partner, job, car, number of kids, city). Then pick a magic number from 3 to 10 and count around and around, crossing off one option each time you land on the number, until exactly ONE option is left standing in every category. The survivors are your future!'
+      'The classic fortune teller, mystical edition. First pick what you want a fortune about: Love, Work, Money, Kids, Home, Travel or Luck. Then fill in the three blanks the spirits ask for (a name, a color, a number — your own truths). The spirits run the ancient MASH count — counting around and crossing off fortunes until the chosen ones remain — and weave your fortune from your own words. In Home, the great count also settles the oldest question of all: Mansion, Apartment, Shack or House.'
   },
   taboo: {
     id: 'taboo',
