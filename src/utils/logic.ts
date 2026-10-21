@@ -416,6 +416,37 @@ export const Logic = {
 };
 
 /* --- Sprouts helpers --- */
+// Starting dot layouts for 3-20 dots on the 300x260 board.
+// 3 dots keeps the classic triangle; larger counts use a sunflower spread
+// so dots stay evenly spaced (and on the page) at every count.
+export function sproutsStartDots(n: number): Array<{ x: number; y: number; deg: number }> {
+  const count = Math.max(3, Math.min(20, Math.floor(n) || 3));
+  if (count === 3) {
+    return [
+      { x: 60, y: 130, deg: 0 },
+      { x: 240, y: 130, deg: 0 },
+      { x: 150, y: 45, deg: 0 }
+    ];
+  }
+  const cx = 150;
+  const cy = 128;
+  const RX = 126;
+  const RY = 98;
+  const GOLDEN = 2.399963; // golden angle, radians
+  const pts: Array<{ x: number; y: number; deg: number }> = [];
+  for (let i = 0; i < count; i++) {
+    const r = Math.sqrt((i + 0.5) / count);
+    const th = i * GOLDEN + 0.6;
+    pts.push({
+      x: Math.round(cx + RX * r * Math.cos(th)),
+      y: Math.round(cy + RY * r * Math.sin(th)),
+      deg: 0
+    });
+  }
+  return pts;
+}
+
+
 function segInt(
   p1: [number, number],
   p2: [number, number],

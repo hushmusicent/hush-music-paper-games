@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { sproutsMid, sproutsLegal, sproutsApply, pickA } from '../utils/logic';
+import { sproutsMid, sproutsLegal, sproutsApply, sproutsStartDots, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
 
@@ -8,18 +8,17 @@ interface SproutsProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Starting dots (3-20), chosen on the option screen BEFORE the game starts.
+  dots?: number;
 }
 
-export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish }) => {
+export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: dotsProp }) => {
+  const startDots = Math.max(3, Math.min(20, dotsProp || 3));
   const [state, setState] = useState(() => ({
     turn: 0,
     over: false,
     sel: -1,
-    dots: [
-      { x: 60, y: 130, deg: 0 },
-      { x: 240, y: 130, deg: 0 },
-      { x: 150, y: 45, deg: 0 }
-    ],
+    dots: sproutsStartDots(startDots),
     edges: [] as Array<{ a: number; b: number; mx: number; my: number; by: number }>
   }));
   const [errorMsg, setErrorMsg] = useState('');
@@ -111,6 +110,9 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish }) => {
       </div>
 
       <PaperPanel>
+        <div className="text-center mb-1">
+          <span className="chip">🌱 {startDots} starting dots</span>
+        </div>
         {errorMsg && <div className="err text-center">{errorMsg}</div>}
         <svg viewBox="0 0 300 260" className="w-full h-auto max-h-[300px] block mx-auto">
           {state.edges.map((e, idx) => {

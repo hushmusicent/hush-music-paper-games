@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GameId, GameMode } from '../types';
 import { GAMES_METADATA } from '../data/games';
-import { Logic } from '../utils/logic';
+import { Logic, sproutsStartDots } from '../utils/logic';
 import { HANG_LEVELS } from '../data/words';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -14,10 +14,12 @@ interface GameModeViewProps {
   onOnlineLobby: () => void;
   onDotsLevel?: (level: number) => void;
   onHangLevel?: (level: number) => void;
+  onSproutsDots?: (dots: number) => void;
 }
 
 const LEVEL_KEY = 'pg_dots_level';
 const HANG_LEVEL_KEY = 'pg_hang_level';
+const SPR_DOTS_KEY = 'pg_sprouts_dots';
 
 function savedLevel(): number {
   try {
@@ -25,6 +27,15 @@ function savedLevel(): number {
     return v >= 1 && v <= 50 ? v : 1;
   } catch (e) {
     return 1;
+  }
+}
+
+function savedSprDots(): number {
+  try {
+    const v = parseInt(localStorage.getItem(SPR_DOTS_KEY) || '3', 10);
+    return v >= 3 && v <= 20 ? v : 3;
+  } catch (e) {
+    return 3;
   }
 }
 
@@ -44,12 +55,14 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
   onBrowseRooms,
   onOnlineLobby,
   onDotsLevel,
-  onHangLevel
+  onHangLevel,
+  onSproutsDots
 }) => {
   const g = GAMES_METADATA[gameId];
   const [pmin, pmax] = g.p;
   const isDots = gameId === 'dots';
   const isHang = gameId === 'hangman';
+  const isSpr = gameId === 'sprouts';
 
   // Dots and Boxes only: mode first, then a level selection screen,
   // and only then does the game start (level picked BEFORE play).
@@ -57,16 +70,27 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
   const [pendingMode, setPendingMode] = useState<GameMode>('pvc');
   const [level, setLevel] = useState<number>(() => savedLevel());
   const [hangLevel, setHangLevel] = useState<number>(() => savedHangLevel());
+  const [sprDots, setSprDots] = useState<number>(() => savedSprDots());
 
   const chooseMode = (mode: GameMode) => {
     Sound.click();
-    if (isDots || isHang) {
+    if (isDots || isHang || isSpr) {
       setPendingMode(mode);
       setStep('level');
       return;
     }
     if (mode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(mode);
+  };
+
+  const startSpr = () => {
+    try {
+      localStorage.setItem(SPR_DOTS_KEY, String(sprDots));
+    } catch (e) {}
+    if (onSproutsDots) onSproutsDots(sprDots);
+    Sound.click();
+    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    else onSelectMode(pendingMode);
   };
 
   const startHang = () => {
@@ -88,6 +112,87 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
+
+  if (isSpr && step === 'level') {
+    const preview = sproutsStartDots(sprDots);
+    return (
+      <div className="space-y-3">
+        <button
+          onClick={() => {
+            Sound.click();
+            setStep('mode');
+          }}
+          className="btn secondary small"
+        >
+          ← Change mode
+        </button>
+
+        <h2 className="text-xl font-bold text-[var(--ink2)] flex items-center gap-2">
+          <span>{g.icon}</span>
+          <span>{g.name} — how many dots?</span>
+        </h2>
+
+        <PaperPanel>
+          <h3
+            className="text-center font-black tracking-wide text-[#22304a]"
+            style={{ fontSize: '22px', letterSpacing: '2px' }}
+          >
+            SPROUTS
+          </h3>
+          <p className="text-center text-xs text-[#5a6a86] mb-3">
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Pick 3 to 20
+            starting dots. More dots = a longer, twistier game.
+          </p>
+
+          <div className="grid gap-1.5 mb-3" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+            {Array.from({ length: 18 }).map((_, i) => {
+              const n = i + 3;
+              const sel = n === sprDots;
+              return (
+                <button
+                  key={n}
+                  onClick={() => {
+                    setSprDots(n);
+                    Sound.click();
+                  }}
+                  className="rounded-lg font-bold cursor-pointer"
+                  style={{
+                    padding: '9px 0',
+                    fontSize: '14px',
+                    border: sel ? '2px solid #1c64d8' : '1px solid #b9c8de',
+                    background: sel ? '#1c64d8' : '#ffffff',
+                    color: sel ? '#ffffff' : '#22304a'
+                  }}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="text-center mb-2">
+            <span className="chip">🌱 {sprDots} starting dots</span>
+          </div>
+
+          <div className="flex justify-center mb-3">
+            <svg width={210} height={182} viewBox="0 0 300 260">
+              {preview.map((d, i) => (
+                <circle key={i} cx={d.x} cy={d.y} r={7} fill="#fffdf4" stroke="#22304a" strokeWidth={2} />
+              ))}
+            </svg>
+          </div>
+
+          <button onClick={startSpr} className="btn">
+            ▶ Start with {sprDots} dots
+          </button>
+          <p className="muted text-center mt-2 text-xs">
+            Draw a line between two dots (or loop back to the same dot) and add a new dot on
+            it. No crossing lines, max 3 lines per dot!
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
 
   if (isHang && step === 'level') {
     const bank = HANG_LEVELS[hangLevel - 1];
