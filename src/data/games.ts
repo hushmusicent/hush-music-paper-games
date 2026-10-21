@@ -106,11 +106,11 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     id: 'wordsearch',
     name: 'Word Search',
     icon: '🔎✏️',
-    desc: 'Find the hidden words',
+    desc: '1,000 hunts that keep getting bigger',
     p: [1, 2],
     payout: PAYOUTS.wordsearch,
     rules:
-      'Eight words are hidden in the 10×10 grid of letters — forwards across, down, or diagonally. Tap the FIRST letter of a word, then tap its LAST letter to circle it. Find all eight words to win. Your time is shown — faster is better!'
+      '1,000 word searches in 10 tiers of 100. Tier 1 is a friendly 10×10 with 8 words hiding across and down; every tier the grid grows and new hiding directions unlock — diagonals, then backwards words — up to Tier 10: a 20×20 grid, 20 words, all 8 directions. Tap the FIRST letter of a word, then tap its LAST letter to circle it. Find every word to clear the puzzle and earn its ✔️ on the checklist (saved on your device). Your time is shown — faster is better! Revealing the words finishes the round without checklist credit.'
   },
   ghost: {
     id: 'ghost',
