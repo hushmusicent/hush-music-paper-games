@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, GameId } from '../types';
 import { GAMES_METADATA } from '../data/games';
-import { AppStore, START_POINTS, DAILY_BONUS } from '../utils/store';
+import { AppStore, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from '../utils/store';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
 
@@ -36,6 +36,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
       return;
     }
     const res = AppStore.demoLogin(u, liPw);
+    if (res.error) {
+      setLiErr(res.error);
+    } else if (res.user) {
+      Sound.win();
+      onLogin(res.user);
+    }
+  };
+
+  const handleDemoLogin = () => {
+    const res = AppStore.demoLogin(DEMO_USER, DEMO_PASS);
     if (res.error) {
       setLiErr(res.error);
     } else if (res.user) {
@@ -104,7 +114,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 type="password"
                 value={liPw}
                 onChange={e => setLiPw(e.target.value)}
-                placeholder="Password (optional for demo)"
+                placeholder="Password"
                 className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm text-[var(--text)]"
               />
             </div>
@@ -113,6 +123,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Log in
             </button>
           </form>
+          <button type="button" className="btn secondary" onClick={handleDemoLogin}>
+            🎮 One-tap demo login
+          </button>
+          <div className="text-[var(--muted)] text-xs mt-2">
+            Demo account — Username: <b>demo</b> · Password: <b>demo1234</b>
+          </div>
         </div>
 
         <div className="card">

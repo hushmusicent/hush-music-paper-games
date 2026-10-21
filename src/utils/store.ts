@@ -3,6 +3,8 @@ import { BOT_NAMES, botCode } from '../data/words';
 
 export const START_POINTS = 1000;
 export const DAILY_BONUS = 500;
+export const DEMO_USER = 'demo';
+export const DEMO_PASS = 'demo1234';
 
 export const PAYOUTS: Record<GameId, number> = {
   dots: 60,
@@ -59,7 +61,27 @@ export class AppStore {
     store.set('accounts', a);
   }
 
+  static ensureDemo() {
+    const a = this.getAccounts();
+    const id = 'local_' + DEMO_USER;
+    if (!a[id]) {
+      a[id] = {
+        username: 'Demo',
+        pw: DEMO_PASS,
+        code: 'DEMO42',
+        points: START_POINTS,
+        winsObj: {},
+        lastDaily: 0,
+        friends: [],
+        requests: [],
+        sent: []
+      };
+      this.saveAccounts(a);
+    }
+  }
+
   static getCurrentUser(): User | null {
+    this.ensureDemo();
     const sess = store.get<string | null>('session', null);
     if (!sess) return null;
     const accounts = this.getAccounts();
@@ -73,6 +95,7 @@ export class AppStore {
   }
 
   static demoSignup(username: string, pw?: string): { user?: User; error?: string } {
+    this.ensureDemo();
     const a = this.getAccounts();
     const id = 'local_' + username.toLowerCase();
     if (a[id]) return { error: 'That username is taken on this device.' };
@@ -94,10 +117,11 @@ export class AppStore {
   }
 
   static demoLogin(username: string, pw?: string): { user?: User; error?: string } {
+    this.ensureDemo();
     const a = this.getAccounts();
     const id = 'local_' + username.toLowerCase();
     if (!a[id]) return { error: 'No account with that username on this device.' };
-    if (a[id].pw && pw && a[id].pw !== pw) return { error: 'Wrong password.' };
+    if ((a[id].pw || '') !== (pw || '')) return { error: 'Wrong password.' };
     store.set('session', id);
     return {
       user: {
