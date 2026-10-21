@@ -1,26 +1,25 @@
 import React from 'react';
 import { User } from '../types';
-import { VoiceBar } from '../components/VoiceBar';
-import { ChatBox } from '../components/ChatBox';
 
+/**
+ * Lobby chat was removed by design (Hush, 2026-10-20): text chat and voice
+ * talk exist ONLY inside a live game — see the VoiceBar + "💬 Game chat"
+ * ChatBox in GameActiveView. This stub stays so the old import path can
+ * never quietly resurrect a lobby chat screen.
+ */
 interface ChatViewProps {
   user: User;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ user }) => {
+export const ChatView: React.FC<ChatViewProps> = () => {
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-bold text-[var(--ink2)]">💬 Lobby chat</h2>
-
-      <VoiceBar roomName="paper-lobby" />
-
+      <h2 className="text-xl font-bold text-[var(--ink2)]">💬 Chat</h2>
       <div className="card">
-        <h3 className="font-bold text-base mb-1">Everyone</h3>
-        <ChatBox chatPath="lobby" user={user} />
-        <div className="text-[var(--muted)] text-xs mt-3">
-          Be kind. In demo mode, messages stay on this device. When Firebase is
-          connected, messages are shared with everyone in the hub.
-        </div>
+        <p className="text-sm">
+          Chat and voice talk live inside the game — open any game and you'll
+          find the game chat and 🎤 Join Voice Talk right on the game screen.
+        </p>
       </div>
     </div>
   );

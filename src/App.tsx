@@ -14,7 +14,6 @@ import { RoomsView } from './views/RoomsView';
 import { LobbyView } from './views/LobbyView';
 import { LeaderboardView } from './views/LeaderboardView';
 import { FriendsView } from './views/FriendsView';
-import { ChatView } from './views/ChatView';
 import { ProfileView } from './views/ProfileView';
 
 type AppView =
@@ -23,7 +22,6 @@ type AppView =
   | 'game_active'
   | 'rooms'
   | 'lobby'
-  | 'chat'
   | 'leaderboard'
   | 'friends'
   | 'profile';
@@ -172,8 +170,6 @@ export const App: React.FC = () => {
             }}
           />
         )}
-
-        {currentView === 'chat' && user && <ChatView user={user} />}
 
         {currentView === 'leaderboard' && <LeaderboardView user={user} />}
 

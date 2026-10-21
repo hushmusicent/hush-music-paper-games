@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sound } from '../utils/sound';
 
-export type NavTab = 'home' | 'chat' | 'leaderboard' | 'friends' | 'profile';
+export type NavTab = 'home' | 'leaderboard' | 'friends' | 'profile';
 
 interface BottomNavProps {
   currentTab: NavTab;
@@ -11,7 +11,6 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab }) => {
   const tabs: Array<{ id: NavTab; icon: string; label: string }> = [
     { id: 'home', icon: '🏠', label: 'Games' },
-    { id: 'chat', icon: '💬', label: 'Chat' },
     { id: 'leaderboard', icon: '🏆', label: 'Top 50' },
     { id: 'friends', icon: '👥', label: 'Friends' },
     { id: 'profile', icon: '👤', label: 'Profile' }
