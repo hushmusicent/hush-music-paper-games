@@ -12,11 +12,13 @@ interface GhostGameProps {
 }
 
 export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) => {
+  const [variant, setVariant] = useState<'classic' | 'reverse'>('classic');
+  const [challengesOn, setChallengesOn] = useState<boolean>(true);
   const [frag, setFrag] = useState<string>('');
   const [ghost, setGhost] = useState<[string, string]>(['', '']);
   const [round, setRound] = useState<number>(1);
   const [turn, setTurn] = useState<number>(0);
-  const [phase, setPhase] = useState<'play' | 'prove'>('play');
+  const [phase, setPhase] = useState<'setup' | 'play' | 'prove'>('setup');
   const [proveSeat, setProveSeat] = useState<number>(-1);
   const [proveWord, setProveWord] = useState<string>('');
   const [letterInput, setLetterInput] = useState<string>('');
@@ -67,9 +69,29 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
     setMsg(`${names[seat]} added ${L}.`);
 
     if (Logic.ghostCompleteMove(nextFrag)) {
+      if (variant === 'reverse') {
+        // Reverse Ghost: building the word first WINS the round — the
+        // other player takes the GHOST letter.
+        loseRound(
+          1 - seat,
+          `${names[seat]} built the word "${nextFrag.toUpperCase()}" and wins the round — ${names[1 - seat]} takes a letter!`
+        );
+      } else {
+        loseRound(
+          seat,
+          `${names[seat]} completed the word "${nextFrag.toUpperCase()}" — round lost!`
+        );
+      }
+      return;
+    }
+
+    if (!challengesOn && Logic.ghostContinuations(nextFrag).length === 0) {
+      // No challenges to save you: playing a letter no word can continue
+      // loses the round on the spot (with challenges on, the next player
+      // would challenge instead).
       loseRound(
         seat,
-        `${names[seat]} completed the word "${nextFrag.toUpperCase()}" — round lost!`
+        `${names[seat]} played "${nextFrag.toUpperCase()}" — no word can continue it. Round lost!`
       );
       return;
     }
@@ -89,7 +111,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
 
   const handleBotTurn = (currentFrag: string) => {
     const conts = Logic.ghostContinuations(currentFrag);
-    if (currentFrag.length >= 3 && (conts.length === 0 || Math.random() < 0.08)) {
+    if (challengesOn && currentFrag.length >= 3 && (conts.length === 0 || Math.random() < 0.08)) {
       // Bot challenges human
       setPhase('prove');
       setProveSeat(0);
@@ -99,13 +121,28 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
       return;
     }
     if (!conts.length) {
-      // Bot challenges human
-      setPhase('prove');
-      setProveSeat(0);
-      setMsg(
-        `The computer challenges you — it does not believe a word continues "${currentFrag.toUpperCase()}"!`
-      );
+      if (challengesOn) {
+        // Bot challenges human
+        setPhase('prove');
+        setProveSeat(0);
+        setMsg(
+          `The computer challenges you — it does not believe a word continues "${currentFrag.toUpperCase()}"!`
+        );
+        return;
+      }
+      // Challenges off and no continuation exists: any letter the bot adds
+      // is a dead end and addLetter resolves the round.
+      addLetter('A', 1);
       return;
+    }
+    if (variant === 'reverse') {
+      // Reverse Ghost: complete a word the moment one is reachable.
+      const completing = conts.filter(w => w.length === currentFrag.length + 1);
+      if (completing.length) {
+        const target = pickA(completing);
+        addLetter(target[currentFrag.length].toUpperCase(), 1);
+        return;
+      }
     }
     const safe = conts.filter(w => w.length !== currentFrag.length + 1);
     const pool = safe.length ? safe : conts;
@@ -121,6 +158,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
   };
 
   const handleChallenge = () => {
+    if (!challengesOn) return;
     Sound.click();
     const challenger = cur;
     const defender = 1 - challenger;
@@ -165,11 +203,67 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
     setProveWord('');
   };
 
+  if (phase === 'setup') {
+    return (
+      <div>
+        <PaperPanel>
+          <h3 className="font-bold text-sm mb-2 text-[#17457e]">👻 Ghost — pick your game</h3>
+
+          <p className="text-sm font-bold mt-2 mb-1">Game type</p>
+          <div className="flex gap-2 my-1">
+            <button
+              onClick={() => setVariant('classic')}
+              className={`btn small !m-0 ${variant === 'classic' ? '' : 'secondary'}`}
+            >
+              👻 Classic Ghost
+            </button>
+            <button
+              onClick={() => setVariant('reverse')}
+              className={`btn small !m-0 ${variant === 'reverse' ? '' : 'secondary'}`}
+            >
+              🔄 Reverse Ghost
+            </button>
+          </div>
+          <p className="muted text-xs">
+            {variant === 'classic'
+              ? 'Classic: DON’T be the one who completes a word of 4+ letters — that loses the round.'
+              : 'Reverse: race to BUILD a word of 4+ letters first — completing it WINS the round and the other player takes a GHOST letter.'}
+          </p>
+
+          <p className="text-sm font-bold mt-3 mb-1">Challenges</p>
+          <div className="flex gap-2 my-1">
+            <button
+              onClick={() => setChallengesOn(true)}
+              className={`btn small !m-0 ${challengesOn ? '' : 'secondary'}`}
+            >
+              ⚔️ Challenges ON
+            </button>
+            <button
+              onClick={() => setChallengesOn(false)}
+              className={`btn small !m-0 ${!challengesOn ? '' : 'secondary'}`}
+            >
+              Challenges OFF
+            </button>
+          </div>
+          <p className="muted text-xs">
+            {challengesOn
+              ? 'On: a player may challenge instead of adding a letter — “no word continues this!” The challenged player must name a real word or lose the round.'
+              : 'Off: no challenges. But careful — playing a letter no word can continue loses the round on the spot.'}
+          </p>
+
+          <button onClick={() => { Sound.click(); setPhase('play'); }} className="btn mt-3">
+            ▶ Start game
+          </button>
+        </PaperPanel>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PaperPanel>
         <h3 className="font-bold text-sm mb-1 text-[#17457e]">
-          Round {round} · 👻 {names[0]}: "{ghost[0] || '—'}" · {names[1]}: "
+          Round {round} · {variant === 'reverse' ? '🔄 Reverse Ghost' : '👻 Ghost'} · {names[0]}: "{ghost[0] || '—'}" · {names[1]}: "
           {ghost[1] || '—'}"
         </h3>
 
@@ -227,17 +321,22 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
               </button>
             </div>
 
-            <button
-              onClick={handleChallenge}
-              disabled={frag.length < 2 || !isMine || over}
-              className="btn secondary text-xs"
-            >
-              ⚔️ Challenge {names[1 - cur]} — no word continues this!
-            </button>
+            {challengesOn && (
+              <button
+                onClick={handleChallenge}
+                disabled={frag.length < 2 || !isMine || over}
+                className="btn secondary text-xs"
+              >
+                ⚔️ Challenge {names[1 - cur]} — no word continues this!
+              </button>
+            )}
 
             <p className="muted text-xs text-center mt-2">
-              Fragment: {frag.length} letter(s). Completing a word of 4+ letters
-              loses the round.
+              Fragment: {frag.length} letter(s).{' '}
+              {variant === 'reverse'
+                ? 'Complete a word of 4+ letters to WIN the round.'
+                : 'Completing a word of 4+ letters loses the round.'}
+              {!challengesOn && ' A letter no word can continue also loses the round.'}
             </p>
           </div>
         )}
