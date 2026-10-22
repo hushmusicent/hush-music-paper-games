@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { GHOST_WORDS, GHOST_SET } from '../data/words';
+import { GHOST_SET } from '../data/words';
 import { Logic, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -54,14 +54,8 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
       }, 400);
       return;
     }
-
-    if (mode === 'pvc' && losingSeat === 0) {
-      // Bot starts new round
-      setTimeout(() => {
-        const w = pickA(GHOST_WORDS.filter(x => x.length >= 5));
-        addLetter(w[0].toUpperCase(), 1);
-      }, 600);
-    }
+    // The loser starts the next round (setTurn above). If that is the bot,
+    // the bot-turn effect below makes its move — no manual kickoff needed.
   };
 
   const addLetter = (L: string, seat: number) => {
@@ -79,14 +73,19 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
       );
       return;
     }
-
-    // If bot's turn next
-    if (mode === 'pvc' && (seat === 0)) {
-      setTimeout(() => {
-        handleBotTurn(nextFrag);
-      }, 600);
-    }
   };
+
+  // Bot moves are driven by state, not by setTimeout chains inside the
+  // handlers: whenever it is the bot's turn in the play phase, it moves.
+  // (The old handler-chained timeouts deadlocked after every round the bot
+  // lost — the turn sat on the bot with nothing left to trigger its move,
+  // and the one kickoff that did exist reused a stale fragment.)
+  useEffect(() => {
+    if (mode !== 'pvc' || over || phase !== 'play' || cur !== 1) return;
+    const t = setTimeout(() => handleBotTurn(frag), 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, over, phase, cur, frag, turn]);
 
   const handleBotTurn = (currentFrag: string) => {
     const conts = Logic.ghostContinuations(currentFrag);
