@@ -73,6 +73,20 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
     }
     Sound.click();
     const nextFrag = frag + L.toLowerCase();
+
+    if (!challengesOn && !Logic.ghostCompleteMove(nextFrag) && Logic.ghostContinuations(nextFrag).length === 0) {
+      // Challenges off: a letter no word can continue is simply not
+      // allowed — the move is rejected and the player picks another letter.
+      // (It used to lose the round on the spot; the user flagged that from
+      // a screenshot — "KEZ" ended his round instantly. With challenges on
+      // this check does not run: bluffing is legal and the next player is
+      // expected to challenge.)
+      setMsg(
+        `"${nextFrag.toUpperCase()}" — no word can continue that, so the letter isn't allowed with Challenges off. Pick a letter that keeps a real word alive.`
+      );
+      return;
+    }
+
     setFrag(nextFrag);
     setTurn(t => t + 1);
     setLetterInput('');
@@ -92,17 +106,6 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
           `${names[seat]} completed the word "${nextFrag.toUpperCase()}" — round lost!`
         );
       }
-      return;
-    }
-
-    if (!challengesOn && Logic.ghostContinuations(nextFrag).length === 0) {
-      // No challenges to save you: playing a letter no word can continue
-      // loses the round on the spot (with challenges on, the next player
-      // would challenge instead).
-      loseRound(
-        seat,
-        `${names[seat]} played "${nextFrag.toUpperCase()}" — no word can continue it. Round lost!`
-      );
       return;
     }
   };
@@ -145,9 +148,20 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
         );
         return;
       }
-      // Challenges off and no continuation exists: any letter the bot adds
-      // is a dead end and addLetter resolves the round.
-      addLetter('A', 1);
+      // Challenges off and no continuation the bot may legally play:
+      // find any legal letter that keeps a word alive; if none exists the
+      // bot is genuinely stuck and loses the round.
+      const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const playable = [...AZ].find(
+        ch =>
+          isLegalLetter(ch, currentFrag) &&
+          Logic.ghostContinuations(currentFrag + ch.toLowerCase()).length > 0
+      );
+      if (playable) {
+        addLetter(playable, 1);
+      } else {
+        loseRound(1, 'The computer has no letter that keeps a word alive — round lost!');
+      }
       return;
     }
     if (variant === 'reverse') {
@@ -263,7 +277,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
           <p className="muted text-xs">
             {challengesOn
               ? 'On: a player may challenge instead of adding a letter — “no word continues this!” The challenged player must name a real word or lose the round.'
-              : 'Off: no challenges. But careful — playing a letter no word can continue loses the round on the spot.'}
+              : 'Off: no challenges — and a letter no word can continue is not allowed, so every letter you play has to keep a real word alive.'}
           </p>
 
           <p className="text-sm font-bold mt-3 mb-1">Letter use</p>
@@ -382,7 +396,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
               {variant === 'reverse'
                 ? 'Complete a word of 4+ letters to WIN the round.'
                 : 'Completing a word of 4+ letters loses the round.'}
-              {!challengesOn && ' A letter no word can continue also loses the round.'}
+              {!challengesOn && ' Letters no word can continue are not allowed.'}
             </p>
           </div>
         )}
