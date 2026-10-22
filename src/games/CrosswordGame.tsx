@@ -13,6 +13,21 @@ interface CrosswordGameProps {
 const DONE_KEY = 'pg_cw_done_v1';
 const PAGE = 100;
 
+// 10 tiers of 100: the grids and the clue counts grow every tier.
+const CW_TIERS: { name: string; size: number }[] = [
+  { name: 'Starter', size: 8 },
+  { name: 'Easy', size: 9 },
+  { name: 'Casual', size: 10 },
+  { name: 'Medium', size: 11 },
+  { name: 'Tricky', size: 12 },
+  { name: 'Hard', size: 13 },
+  { name: 'Expert', size: 14 },
+  { name: 'Master', size: 15 },
+  { name: 'Grandmaster', size: 16 },
+  { name: 'Championship', size: 17 }
+];
+const tierOfCw = (id: number) => Math.min(9, Math.floor((id - 1) / 100));
+
 const loadDone = (): Set<number> => {
   try {
     const raw = localStorage.getItem(DONE_KEY);
@@ -298,6 +313,14 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
             );
           })}
         </div>
+        <p className="text-sm mb-2">
+          <b>Tier {page + 1} · {CW_TIERS[page].name}</b>{' '}
+          <span className="muted">
+            — {CW_TIERS[page].size}×{CW_TIERS[page].size} grids
+            {page === 9 ? ', and #1000 is the giant 21×21 Sunday finale' : ''}. Every tier the
+            puzzles get bigger, with more clues to solve.
+          </span>
+        </p>
         <div className="flex justify-between items-center">
           <button
             className="btn small secondary !m-0"
@@ -343,14 +366,34 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
       <PaperPanel>
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-bold text-lg">
-            📰 Crossword #{pz.id} <span className="muted text-sm">({size}×{size})</span>
+            📰 Crossword #{pz.id}{' '}
+            <span className="muted text-sm">
+              Tier {tierOfCw(pz.id) + 1} {CW_TIERS[tierOfCw(pz.id)].name} · {size}×{size} ·{' '}
+              {pz.entries.length} clues
+              {pz.id === 1000 ? ' · Sunday finale!' : ''}
+            </span>
           </h3>
           {done.has(pz.id - 1) && <span className="text-sm">✔️ Done</span>}
         </div>
 
         <div
           className="cwgrid mb-3"
-          style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+          style={{
+            gridTemplateColumns: `repeat(${size}, 1fr)`,
+            maxWidth: size >= 13 ? '430px' : '330px',
+            fontSize: `${
+              size >= 21 ? 10.5 :
+              size >= 17 ? 12 :
+              size >= 16 ? 12.5 :
+              size >= 15 ? 13 :
+              size >= 14 ? 13.5 :
+              size >= 13 ? 14 :
+              size >= 12 ? 15 :
+              size >= 11 ? 16 :
+              size >= 10 ? 17 :
+              size >= 9 ? 18 : 19
+            }px`
+          }}
         >
           {pz.grid.map((row, r) =>
             row.split('').map((sol, c) => {

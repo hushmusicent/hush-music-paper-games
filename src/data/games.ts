@@ -100,7 +100,7 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     p: [1, 2],
     payout: PAYOUTS.crossword,
     rules:
-      'Real newspaper-style crosswords: 1,000 interlocking puzzles (8×8 and 9×9) where every letter is crossed by an Across and a Down answer. The checklist screen tracks you — finished puzzles earn a ✔️ and the count is saved on your device. Tap a square to pick its word (tap again to switch Across/Down), type letters, and use Check to mark right and wrong squares. Stuck? The answers are printed at the bottom of the puzzle, upside down, just like in the newspaper — flip your phone if you must peek! Revealing the answers finishes the round without checklist credit; solve the whole grid yourself to earn the ✔️ and the points.'
+      'Real newspaper-style crosswords in 10 tiers of 100: Tier 1 starts at 8×8 with about 24 clues, and every tier the grid grows and the Q&A count climbs — 10×10, 12×12, the 15×15 newspaper-daily size with ~70 clues, up to Tier 10 at 17×17 with 90+ clues and longer, harder answers. Puzzle #1000 is the Sunday finale: a giant 21×21 with 110 clues. Every letter is crossed by an Across and a Down answer. The checklist screen tracks you — finished puzzles earn a ✔️ and the count is saved on your device. Tap a square to pick its word (tap again to switch Across/Down), type letters, and use Check to mark right and wrong squares. Stuck? The answers are printed at the bottom of the puzzle, upside down, just like in the newspaper — flip your phone if you must peek! Revealing the answers finishes the round without checklist credit; solve the whole grid yourself to earn the ✔️ and the points.'
   },
   wordsearch: {
     id: 'wordsearch',
