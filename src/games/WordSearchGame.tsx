@@ -326,8 +326,17 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
 
   /* ---------- play screen ---------- */
   const tier = TIERS[tierOf(pz.id)];
-  const huge = pz.size >= 25;
-  const fontSize = huge ? 12 : pz.size >= 20 ? 11 : pz.size >= 15 ? 12 : pz.size >= 13 ? 13 : 15;
+  const fontSize =
+    pz.size >= 40 ? 7.5 :
+    pz.size >= 36 ? 8 :
+    pz.size >= 32 ? 8.5 :
+    pz.size >= 28 ? 9.5 :
+    pz.size >= 25 ? 10.5 :
+    pz.size >= 22 ? 11 :
+    pz.size >= 20 ? 12 :
+    pz.size >= 18 ? 13 :
+    pz.size >= 16 ? 14 :
+    pz.size >= 14 ? 15 : 16;
   return (
     <div>
       <PaperPanel>
@@ -345,13 +354,11 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
 
         {errorMsg && <div className="err text-xs text-center">{errorMsg}</div>}
 
-        <div style={huge ? { overflowX: 'auto', paddingBottom: '6px' } : undefined}>
         <div
           className="wsgrid"
           style={{
             gridTemplateColumns: `repeat(${pz.size}, 1fr)`,
-            fontSize: `${fontSize}px`,
-            minWidth: huge ? `${pz.size * 15}px` : undefined
+            fontSize: `${fontSize}px`
           }}
         >
           {pz.grid.map((row, r) =>
@@ -370,7 +377,6 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
               );
             })
           )}
-        </div>
         </div>
 
         <div className="my-3 flex flex-wrap justify-center gap-1">

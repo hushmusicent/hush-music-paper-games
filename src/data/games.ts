@@ -110,7 +110,7 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     p: [1, 2],
     payout: PAYOUTS.wordsearch,
     rules:
-      '1,000 word searches in 10 tiers of 100, drawn from a bank of 94,205 words. Tier 1 is a friendly 12×12 with 10 words hiding across and down; every tier the grid grows and new hiding directions unlock — diagonals, then backwards words — up to Tier 10 at 36×36 with 75 words in all 8 directions. And puzzle #1000 is the finale: a giant 40×40 grid with 100 words to find. Big late-tier grids scroll sideways so every letter stays tappable. Tap the FIRST letter of a word, then tap its LAST letter to circle it. Find every word to clear the puzzle and earn its ✔️ on the checklist (saved on your device). Your time is shown — faster is better! Revealing the words finishes the round without checklist credit.'
+      '1,000 word searches in 10 tiers of 100, drawn from a bank of 94,205 words. Tier 1 is a friendly 12×12 with 16 words hiding across and down; every tier the grid grows, the word count climbs, and new hiding directions unlock — diagonals, then backwards words — up to Tier 10 at 36×36 with 105 words in all 8 directions. And puzzle #1000 is the finale: a giant 40×40 grid with 130 words to find. Every grid is sized to fit the page. Tap the FIRST letter of a word, then tap its LAST letter to circle it. Find every word to clear the puzzle and earn its ✔️ on the checklist (saved on your device). Your time is shown — faster is better! Revealing the words finishes the round without checklist credit.'
   },
   ghost: {
     id: 'ghost',

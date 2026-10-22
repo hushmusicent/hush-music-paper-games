@@ -157,20 +157,24 @@ body {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   gap: 2px;
-  max-width: 360px;
+  width: 100%;
+  max-width: 430px;
   margin: 8px auto;
+  box-sizing: border-box;
 }
 
 .wscell {
   background: #eef4ff;
   border: 1px solid #b9cfea;
-  border-radius: 5px;
+  border-radius: 4px;
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 15px;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
   color: #17457e;
   cursor: pointer;
   user-select: none;
