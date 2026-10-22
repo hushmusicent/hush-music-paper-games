@@ -14,6 +14,7 @@ interface GhostGameProps {
 export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) => {
   const [variant, setVariant] = useState<'classic' | 'reverse'>('classic');
   const [challengesOn, setChallengesOn] = useState<boolean>(true);
+  const [oneUse, setOneUse] = useState<boolean>(false);
   const [frag, setFrag] = useState<string>('');
   const [ghost, setGhost] = useState<[string, string]>(['', '']);
   const [round, setRound] = useState<number>(1);
@@ -60,7 +61,16 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
     // the bot-turn effect below makes its move — no manual kickoff needed.
   };
 
+  const isLegalLetter = (L: string, f: string): boolean =>
+    !oneUse || 'aeiou'.includes(L.toLowerCase()) || !f.includes(L.toLowerCase());
+
   const addLetter = (L: string, seat: number) => {
+    if (!isLegalLetter(L, frag)) {
+      setMsg(
+        `${L} is already in the fragment — with 1-Letter Use on, a consonant can only be played once per round (vowels can repeat).`
+      );
+      return;
+    }
     Sound.click();
     const nextFrag = frag + L.toLowerCase();
     setFrag(nextFrag);
@@ -110,7 +120,12 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
   }, [mode, over, phase, cur, frag, turn]);
 
   const handleBotTurn = (currentFrag: string) => {
-    const conts = Logic.ghostContinuations(currentFrag);
+    const allConts = Logic.ghostContinuations(currentFrag);
+    // With 1-Letter Use on, the bot may only pick words whose next letter
+    // it is actually allowed to play.
+    const conts = oneUse
+      ? allConts.filter(w => isLegalLetter(w[currentFrag.length], currentFrag))
+      : allConts;
     if (challengesOn && currentFrag.length >= 3 && (conts.length === 0 || Math.random() < 0.08)) {
       // Bot challenges human
       setPhase('prove');
@@ -251,6 +266,27 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
               : 'Off: no challenges. But careful — playing a letter no word can continue loses the round on the spot.'}
           </p>
 
+          <p className="text-sm font-bold mt-3 mb-1">Letter use</p>
+          <div className="flex gap-2 my-1">
+            <button
+              onClick={() => setOneUse(true)}
+              className={`btn small !m-0 ${oneUse ? '' : 'secondary'}`}
+            >
+              🔤 1-Letter Use ON
+            </button>
+            <button
+              onClick={() => setOneUse(false)}
+              className={`btn small !m-0 ${!oneUse ? '' : 'secondary'}`}
+            >
+              1-Letter Use OFF
+            </button>
+          </div>
+          <p className="muted text-xs">
+            {oneUse
+              ? 'On: each consonant can be played only ONCE per round — once it is in the fragment, nobody can play it again. Vowels (A E I O U) are excepted and can repeat freely.'
+              : 'Off: any letter can be played again and again, like the doubles in APPLE or BOOK.'}
+          </p>
+
           <button onClick={() => { Sound.click(); setPhase('play'); }} className="btn mt-3">
             ▶ Start game
           </button>
@@ -272,6 +308,16 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
         <div className="frag text-3xl font-black text-center my-4 tracking-widest text-[#17457e]">
           {frag ? frag.toUpperCase() : '?'}
         </div>
+
+        {oneUse && (
+          <p className="muted text-xs text-center -mt-2 mb-2">
+            🔤 1-Letter Use: consonants already played are locked —{' '}
+            {[...new Set(frag.split('').filter(ch => !'aeiou'.includes(ch)))]
+              .map(ch => ch.toUpperCase())
+              .join(' · ') || 'none yet'}{' '}
+            (vowels can repeat)
+          </p>
+        )}
 
         {phase === 'prove' ? (
           <div className="my-3">
