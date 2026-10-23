@@ -127,10 +127,10 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     name: 'Word Ladders',
     icon: '🪜✏️',
     desc: 'One letter at a time',
-    p: [1, 2],
+    p: [2, 2],
     payout: PAYOUTS.ladder,
     rules:
-      'Start at the given word and reach the target word by changing EXACTLY ONE letter at a time. Every step must be a real word in the dictionary. The par shows the best known number of steps — match it if you can!'
+      'A race up the same ladder. Both players build on ONE shared chain, taking turns: change EXACTLY ONE letter to make a new real word (no repeats). Whoever plays the TARGET word first wins — and if you leave your opponent with no legal move, you win too. Before the race, pick a LEVEL from 1 to 10: the words get longer as the levels rise (3 letters at Level 1 up to 7 letters and the longest routes in the game at Level 10). Optional 30-SECOND TURN TIMER: run out of time and your turn passes to the other player.'
   },
   consequences: {
     id: 'consequences',
