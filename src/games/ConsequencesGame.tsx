@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { CONS_FIELDS, CONS_BOT } from '../data/words';
+import { CONS_STORIES, CONS_BANKS, ConsStory } from '../data/consequences';
 import { pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -11,11 +11,30 @@ interface ConsequencesGameProps {
   onFinish: (result: FinishResult) => void;
 }
 
+// Fill {key} tokens from the story values, bolding each filled blank.
+const renderTemplate = (story: ConsStory, values: Record<string, string>) => {
+  const lines = story.template;
+  return lines.map((line, li) => (
+    <React.Fragment key={li}>
+      {line.split(/(\{\w+\})/g).map((part, pi) => {
+        const m = part.match(/^\{(\w+)\}$/);
+        return m ? (
+          <b key={pi}>{values[m[1]] || '?'}</b>
+        ) : (
+          <React.Fragment key={pi}>{part}</React.Fragment>
+        );
+      })}
+      {li < lines.length - 1 && <br />}
+    </React.Fragment>
+  ));
+};
+
 export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
   mode,
   names,
   onFinish
 }) => {
+  const [story, setStory] = useState<ConsStory>(() => pickA(CONS_STORIES));
   const [vals, setVals] = useState<Record<string, string>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<'write' | 'cover' | 'reveal'>('write');
@@ -28,10 +47,38 @@ export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
       ? 'me'
       : 'other';
 
-  const activeFields = CONS_FIELDS.filter(f => f.who === currentWho);
+  const activeFields = story.fields.filter(f => f.who === currentWho);
 
   const handleInputChange = (k: string, v: string) => {
     setInputs(prev => ({ ...prev, [k]: v }));
+  };
+
+  const shuffleStory = () => {
+    if (Object.keys(vals).length > 0) return;
+    Sound.click();
+    const others = CONS_STORIES.filter(s => s.id !== story.id);
+    setStory(pickA(others));
+    setInputs({});
+    setErrorMsg('');
+  };
+
+  // The computer fills the other player's blanks from the themed banks,
+  // never repeating a bank entry inside one story.
+  const botFill = (base: Record<string, string>): Record<string, string> => {
+    const merged = { ...base };
+    const usedByBank = new Map<string, Set<string>>();
+    for (const f of story.fields) {
+      if (f.who !== 'other') continue;
+      const bankKey = f.bank || 'dialogue';
+      const bank = CONS_BANKS[bankKey] || CONS_BANKS.dialogue;
+      if (!usedByBank.has(bankKey)) usedByBank.set(bankKey, new Set());
+      const used = usedByBank.get(bankKey)!;
+      const fresh = bank.filter(v => !used.has(v));
+      const val = pickA(fresh.length ? fresh : bank);
+      used.add(val);
+      merged[f.k] = val;
+    }
+    return merged;
   };
 
   const handlePassOrFinish = () => {
@@ -50,12 +97,7 @@ export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
     Sound.click();
 
     if (mode === 'pvc') {
-      const merged: Record<string, string> = { ...vals, ...inputs };
-      for (const f of CONS_FIELDS) {
-        if (f.who === 'other') {
-          merged[f.k] = pickA(CONS_BOT[f.k] || ['???']);
-        }
-      }
+      const merged = botFill({ ...vals, ...inputs });
       setVals(merged);
       setPhase('reveal');
       finishStory(merged);
@@ -78,16 +120,11 @@ export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
     setTimeout(() => {
       onFinish({
         winner: 0,
-        title: '📖 The story is complete!',
+        title: `📖 ${story.icon} ${story.title} — the story is complete!`,
         result: 'w',
         body: (
           <div className="paper my-3 text-base leading-relaxed">
-            The <b>{storyVals.adj1 || '?'}</b> <b>{storyVals.man || '?'}</b> met the{' '}
-            <b>{storyVals.adj2 || '?'}</b> <b>{storyVals.woman || '?'}</b> at{' '}
-            <b>{storyVals.place || '?'}</b>.<br />
-            He said, “{storyVals.heSaid || '…'}”<br />
-            She said, “{storyVals.sheSaid || '…'}”<br />
-            And the consequence was… <b>{storyVals.ending || '…'}</b>
+            {renderTemplate(story, storyVals)}
           </div>
         )
       });
@@ -116,15 +153,24 @@ export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
     <div>
       <PaperPanel>
         <h3 className="font-bold text-lg mb-1">
+          {story.icon} {story.title}
+        </h3>
+        <p className="text-sm font-bold text-[#17457e] mb-1">
           ✍️{' '}
           {mode === 'hotseat'
             ? `${Object.keys(vals).length === 0 ? names[0] : names[1]}, write your secret lines`
             : 'Write your secret lines'}
-        </h3>
-        <p className="muted text-xs mb-3">
-          Shh — the other lines are hidden until the reveal, just like folding the
-          paper over.
         </p>
+        <p className="muted text-xs mb-3">
+          Shh — the other lines are hidden until the reveal, just like folding
+          the paper over. A different story every game!
+        </p>
+
+        {Object.keys(vals).length === 0 && (
+          <button onClick={shuffleStory} className="btn secondary small !m-0 mb-3">
+            🎲 Shuffle story ({CONS_STORIES.length} to choose from)
+          </button>
+        )}
 
         {activeFields.map(f => (
           <div key={f.k} className="mb-2">
@@ -143,7 +189,9 @@ export const ConsequencesGame: React.FC<ConsequencesGameProps> = ({
         {errorMsg && <div className="err text-xs my-2">{errorMsg}</div>}
 
         <button onClick={handlePassOrFinish} className="btn mt-3">
-          Fold the paper &amp; pass it on 🙈
+          {mode !== 'pvc' && Object.keys(vals).length === 0
+            ? 'Fold the paper & pass it on 🙈'
+            : 'Fold the paper & reveal the story 📖'}
         </button>
       </PaperPanel>
     </div>

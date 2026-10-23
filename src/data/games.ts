@@ -140,7 +140,7 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
     p: [1, 4],
     payout: PAYOUTS.consequences,
     rules:
-      "The classic fold-over story. Each player secretly writes their lines — an adjective, a man's name, another adjective, a woman's name, a place, what HE said, what SHE said, and what the consequence was — with the paper folded so nobody sees previous lines. Read the hilarious combined story at the big reveal!"
+      "The classic fold-over story — with a twist: every game deals a DIFFERENT storyline (12 in all — the classic meeting, a job interview, a space mission, a cooking show, a superhero showdown, a haunted house, a pirate treasure, a time-travel mix-up, and more), each with its own blanks. Players secretly write their lines with the paper folded so nobody sees the previous lines, then read the hilarious combined story at the big reveal. Don't like the story you drew? Hit Shuffle before anyone writes. Against the computer, it fills its lines from big themed dialogue banks, so its lines are different every game too."
   },
   telephone: {
     id: 'telephone',
