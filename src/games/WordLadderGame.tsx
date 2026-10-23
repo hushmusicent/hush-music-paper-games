@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GameMode, FinishResult } from '../types';
 import { LADDER_PUZZLES } from '../data/words';
-import { WEBSTER_WORDS } from '../data/dictionary';
+import { DICTIONARY_WORDS } from '../data/dictionary';
 import { Logic, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -50,7 +50,7 @@ export const WordLadderGame: React.FC<WordLadderGameProps> = ({ mode, names, onF
     return d;
   };
   const legalMoves = (from: string, chain: string[]): string[] =>
-    WEBSTER_WORDS.map(w => w.toUpperCase()).filter(
+    DICTIONARY_WORDS.map(w => w.toUpperCase()).filter(
       w =>
         w.length === from.length &&
         w !== from &&

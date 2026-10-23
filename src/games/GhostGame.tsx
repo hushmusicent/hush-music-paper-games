@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GameMode, FinishResult } from '../types';
-import { WEBSTER_SET } from '../data/dictionary';
+import { DICTIONARY_SET } from '../data/dictionary';
 import { Logic, pickA } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -150,7 +150,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish }) =
   const handleProve = () => {
     Sound.click();
     const w = proveWord.trim().toLowerCase();
-    const ok = w.startsWith(frag) && w.length > frag.length && WEBSTER_SET.has(w);
+    const ok = w.startsWith(frag) && w.length > frag.length && DICTIONARY_SET.has(w);
     if (ok) {
       loseRound(
         1 - proveSeat,
