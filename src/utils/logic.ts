@@ -1,11 +1,5 @@
-import {
-  GHOST_WORDS,
-  GHOST_SET,
-  LADDER_SET,
-  CAT_CATS,
-  CAT_LISTS,
-  CrosswordPuzzle
-} from '../data/words';
+import { CAT_CATS, CAT_LISTS, CrosswordPuzzle } from '../data/words';
+import { WEBSTER_WORDS, WEBSTER_SET } from '../data/dictionary';
 
 export const rnd = (n: number) => Math.floor(Math.random() * n);
 export const ri = (a: number, b: number) => a + rnd(b - a + 1);
@@ -239,11 +233,11 @@ export const Logic = {
 
   /* --- Ghost --- */
   ghostIsWord(frag: string): boolean {
-    return frag.length >= 4 && GHOST_SET.has(frag.toLowerCase());
+    return frag.length >= 4 && WEBSTER_SET.has(frag.toLowerCase());
   },
   ghostContinuations(frag: string): string[] {
     const f = frag.toLowerCase();
-    return GHOST_WORDS.filter(w => w.startsWith(f) && w.length > f.length);
+    return WEBSTER_WORDS.filter(w => w.startsWith(f) && w.length > f.length);
   },
   ghostCompleteMove(frag: string): boolean {
     return this.ghostIsWord(frag);
@@ -259,7 +253,7 @@ export const Logic = {
     return d === 1;
   },
   ladderValid(word: string): boolean {
-    return LADDER_SET.has(String(word).toLowerCase());
+    return WEBSTER_SET.has(String(word).toLowerCase());
   },
 
   /* --- Word Search --- */
