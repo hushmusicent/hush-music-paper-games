@@ -109,7 +109,11 @@ function botDoodleDataUrl(phraseText?: string): { img: string; word: string } {
 
 export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onFinish }) => {
   const [chain, setChain] = useState<ChainItem[]>([]);
-  const [stepIdx, setStepIdx] = useState(0);
+  // The step number is DERIVED from the chain, never stored: every finished
+  // step appends exactly one item, so chain.length IS the current step.
+  // (Storing it in state let a stale timer closure resurrect an old step —
+  // the bot redrew its own step forever and the game stuck on "drawing…".)
+  const stepIdx = chain.length;
   const [screen, setScreen] = useState<'cover' | 'input' | 'bot' | 'reveal'>('input');
   const [textInput, setTextInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -173,7 +177,7 @@ export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onF
     setChain(nextChain);
     setTextInput('');
     setErrorMsg('');
-    const next = stepIdx + 1;
+    const next = nextChain.length;
     if (next >= PLAN.length) {
       setScreen('reveal');
       Sound.win();
@@ -194,12 +198,13 @@ export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onF
       }, 700);
       return;
     }
-    setStepIdx(next);
     const nextStep = PLAN[next];
     if (mode === 'pvc' && nextStep.seat === 1) {
       setScreen('bot');
       botTimerRef.current = setTimeout(() => runBotStep(nextStep, nextChain), 1100);
-    } else if (mode !== 'pvc') {
+    } else if (mode !== 'pvc' && nextStep.seat !== PLAN[nextChain.length - 1].seat) {
+      // Pass-and-play: only show the pass screen when the phone actually
+      // changes hands — drawing your own guess keeps the phone with you.
       setScreen('cover');
     } else {
       setScreen('input');
