@@ -179,29 +179,17 @@ export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onF
     setErrorMsg('');
     const next = nextChain.length;
     if (next >= PLAN.length) {
+      // The reveal is the payoff — it stays up until the player taps
+      // Finish. (It used to auto-jump to the result screen after 0.7s,
+      // far too fast to read the chain.)
       setScreen('reveal');
       Sound.win();
-      setTimeout(() => {
-        onFinish({
-          winner: 0,
-          title: '📞 Chain complete!',
-          result: 'w',
-          body: (
-            <div className="paper my-2">
-              <p>
-                The full chain is on the board — start phrase vs last guess.
-                That is the game: it ALWAYS mutates! 😂
-              </p>
-            </div>
-          )
-        });
-      }, 700);
       return;
     }
     const nextStep = PLAN[next];
     if (mode === 'pvc' && nextStep.seat === 1) {
       setScreen('bot');
-      botTimerRef.current = setTimeout(() => runBotStep(nextStep, nextChain), 1100);
+      botTimerRef.current = setTimeout(() => runBotStep(nextStep, nextChain), 2000);
     } else if (mode !== 'pvc' && nextStep.seat !== PLAN[nextChain.length - 1].seat) {
       // Pass-and-play: only show the pass screen when the phone actually
       // changes hands — drawing your own guess keeps the phone with you.
@@ -209,6 +197,23 @@ export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onF
     } else {
       setScreen('input');
     }
+  };
+
+  const finishGame = () => {
+    Sound.click();
+    onFinish({
+      winner: 0,
+      title: '📞 Chain complete!',
+      result: 'w',
+      body: (
+        <div className="paper my-2">
+          <p>
+            The full chain is on the board — start phrase vs last guess.
+            That is the game: it ALWAYS mutates! 😂
+          </p>
+        </div>
+      )
+    });
   };
 
   const handleTextSubmit = () => {
@@ -344,6 +349,9 @@ export const PaperTelephone: React.FC<PaperTelephoneProps> = ({ mode, names, onF
           It started as “<b>{chain[0]?.text || ''}</b>” and ended as “
           <b>{chain[chain.length - 1]?.text || ''}</b>” 😂
         </p>
+        <button onClick={finishGame} className="btn mt-4">
+          Finish 🏁
+        </button>
       </PaperPanel>
     );
   }
