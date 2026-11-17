@@ -153,3 +153,18 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
       'Players sit in a chain. The first writes a phrase: the next player must DRAW the phrase, the next must GUESS the drawing in words, the next DRAWS that guess — alternating writing and drawing until the paper comes back. Compare the start and end and laugh at how it mutated!'
   }
 };
+
+// The 8 games with real two-phone head-to-head play. The other 7 party
+// games still get a live room (chat + voice), but the game itself runs
+// hotseat-style on the host's phone. One list so the home grid, the
+// record table and the lobby all agree on which is which.
+export const HEAD_TO_HEAD_GAMES: GameId[] = [
+  'dots',
+  'ttt',
+  'hangman',
+  'sprouts',
+  'sim',
+  'bulls',
+  'wordsearch',
+  'ghost'
+];

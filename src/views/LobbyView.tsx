@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameId, User } from '../types';
-import { GAMES_METADATA } from '../data/games';
+import { GAMES_METADATA, HEAD_TO_HEAD_GAMES } from '../data/games';
 import { AppStore, store } from '../utils/store';
 import { Backend, Net, RoomDoc } from '../utils/net';
 import { Sound } from '../utils/sound';
@@ -11,20 +11,6 @@ interface LobbyViewProps {
   onBack: () => void;
   onStartRoomGame: (code: string) => void;
 }
-
-// The 8 games with real two-phone head-to-head play. The other 7 party
-// games still get a live room (chat + voice), but the game itself runs
-// hotseat-style on the host's phone — same as the original build's caveat.
-const HEAD_TO_HEAD: GameId[] = [
-  'dots',
-  'ttt',
-  'hangman',
-  'sprouts',
-  'sim',
-  'bulls',
-  'wordsearch',
-  'ghost'
-];
 
 export const LobbyView: React.FC<LobbyViewProps> = ({
   gameId,
@@ -39,7 +25,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [room, setRoom] = useState<RoomDoc | null>(() => Net.room);
   const [lastRoom] = useState<string>(() => store.get('lastroom', ''));
   const online = Backend.mode === 'firebase';
-  const headToHead = HEAD_TO_HEAD.includes(gameId);
+  const headToHead = HEAD_TO_HEAD_GAMES.includes(gameId);
 
   // Watch the room: when seats fill (or the game already started, on a
   // rejoin) both phones move into the game together.

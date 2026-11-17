@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, GameId } from '../types';
-import { GAMES_METADATA } from '../data/games';
+import { GAMES_METADATA, HEAD_TO_HEAD_GAMES } from '../data/games';
 import { AppStore, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from '../utils/store';
 import { Backend, NetAuth, OnlinePoints } from '../utils/net';
 import { PaperPanel } from '../components/PaperPanel';
@@ -266,7 +266,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         )}
 
         <div className="text-[var(--muted)] text-xs mt-2">
-          Every game: 🤖 vs Computer · 👥 Pass &amp; Play · 🌐 Online PvP room.
+          🌐 = full online PvP · 👥 = party room (chat + voice, game on the
+          host&apos;s phone). Every game: 🤖 vs Computer · 👥 Pass &amp; Play.
           Win PvC games to earn points.
         </div>
       </div>
@@ -286,6 +287,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="e">{g.icon}</div>
               <div className="n">{g.name}</div>
               <div className="t">{g.desc}</div>
+              <div className="text-xs mt-1">
+                {HEAD_TO_HEAD_GAMES.includes(id)
+                  ? '🌐 Online PvP'
+                  : '👥 Party room · chat + voice'}
+              </div>
             </div>
           );
         })}

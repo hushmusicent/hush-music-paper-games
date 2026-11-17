@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, GameId, UserStats } from '../types';
 import { AppStore, store, DAILY_BONUS } from '../utils/store';
 import { Backend, NetAuth, OnlinePoints } from '../utils/net';
-import { GAMES_METADATA } from '../data/games';
+import { GAMES_METADATA, HEAD_TO_HEAD_GAMES } from '../data/games';
 import { Modal } from '../components/Modal';
 import { Sound } from '../utils/sound';
 
@@ -146,6 +146,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       <div className="card">
         <h3 className="font-bold text-base mb-2">📊 Your game record</h3>
+        <div className="text-xs text-[var(--muted)] mb-2">
+          🌐 = full online PvP · 👥 = party room (chat + voice, game on the
+          host&apos;s phone)
+        </div>
         <div className="overflow-x-auto">
           <table className="lb">
             <thead>
@@ -166,7 +170,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 return (
                   <tr key={id}>
                     <td>
-                      {g.icon} {g.name}
+                      {g.icon} {g.name}{' '}
+                      {HEAD_TO_HEAD_GAMES.includes(id) ? '🌐' : '👥'}
                     </td>
                     <td>{s.w}</td>
                     <td>{s.l}</td>
