@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { GameMode, FinishResult } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameMode, FinishResult, NetGameProp } from '../types';
 import { Logic } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -10,38 +10,105 @@ interface DotsAndBoxesProps {
   onFinish: (result: FinishResult) => void;
   // Chosen on the level selection screen (GameModeView) BEFORE the game starts.
   level?: number;
+  // Live-room sync — present only in online mode. Same pattern as TicTacToe:
+  // serialize the full local state after every move, apply remote state when
+  // it arrives, gate turns by mySeat. The Dots Logic state object itself is
+  // the state (cols/rows/h/v/boxes/turn/over/scores), so serialize it whole.
+  net?: NetGameProp;
 }
 
-export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish, level: levelProp }) => {
+type DotsState = ReturnType<typeof Logic.dotsNew>;
+
+export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish, level: levelProp, net }) => {
   const level = Math.max(1, Math.min(50, levelProp || 1));
   const [state, setState] = useState(() => { const sz = Logic.dotsSizeForLevel(level); return Logic.dotsNew(sz.w, sz.h); });
 
   const cur = state.turn % names.length;
-  const isMine = mode === 'pvc' ? cur === 0 : true;
+  const isMine = net ? cur === net.mySeat : mode === 'pvc' ? cur === 0 : true;
   const cols = state.cols;
   const rows = state.rows;
   const totalBoxes = cols * rows;
 
-  const afterMove = (newState: typeof state) => {
-    if (newState.over) {
-      setTimeout(() => {
-        const s0 = newState.scores[0];
-        const s1 = newState.scores[1];
-        const winner = s0 === s1 ? -1 : s0 > s1 ? 0 : 1;
-        onFinish({
-          winner,
-          title: winner === -1 ? 'Draw!' : `${names[winner]} wins!`,
-          body: (
-            <div className="msg">
-              Level {level} · {newState.cols}×{newState.rows} boxes — final: {names[0]}: {s0} ·{' '}
-              {names[1]}: {s1}.
-            </div>
-          )
-        });
-      }, 400);
-      return;
-    }
+  // In online mode the board (and its level) comes from the host's opening
+  // state, which may differ from this device's level prop — read the level
+  // back off the shared board size so both phones show the same level.
+  // In pvc/hotseat effLevel === level, so nothing changes there.
+  const effLevel = net
+    ? Logic.DOTS_LEVELS.findIndex(([w, h]) => w === cols && h === rows) + 1 || level
+    : level;
 
+  // --- net sync -----------------------------------------------------------
+  // The Logic state object already carries `turn` and `over` top-level, so
+  // serializing it whole satisfies the net contract (turn + over included).
+  const serialize = (): DotsState => state;
+  const localJson = useRef('');
+  localJson.current = JSON.stringify(serialize());
+  const pushedInit = useRef(false);
+  const finishFired = useRef(false);
+
+  // Host publishes the opening state once; the guest waits for it.
+  useEffect(() => {
+    if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
+      pushedInit.current = true;
+      net.push(JSON.parse(JSON.stringify(state)));
+    }
+    // Only on mount: the host's opening push must fire exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply the opponent's move when remote state arrives (skip our own echo).
+  useEffect(() => {
+    if (!net || !net.remote) return;
+    const incoming = JSON.stringify(net.remote);
+    if (incoming === localJson.current) return;
+    const s = net.remote as DotsState;
+    if (
+      typeof s.cols === 'number' && typeof s.rows === 'number' &&
+      Array.isArray(s.h) && Array.isArray(s.v) && Array.isArray(s.boxes) &&
+      Array.isArray(s.scores) && s.scores.length === 2 &&
+      typeof s.turn === 'number' && typeof s.over === 'boolean'
+    ) {
+      setState({
+        cols: s.cols,
+        rows: s.rows,
+        h: [...s.h],
+        v: [...s.v],
+        boxes: [...s.boxes],
+        turn: s.turn,
+        over: s.over,
+        scores: [s.scores[0], s.scores[1]] as [number, number]
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [net ? net.remote : null]);
+
+  // Finish fires from state (local move OR remote apply), once, both sides.
+  useEffect(() => {
+    if (!state.over || finishFired.current) return;
+    finishFired.current = true;
+    const t = setTimeout(() => {
+      const s0 = state.scores[0];
+      const s1 = state.scores[1];
+      const winner = s0 === s1 ? -1 : s0 > s1 ? 0 : 1;
+      onFinish({
+        winner,
+        title: winner === -1 ? 'Draw!' : `${names[winner]} wins!`,
+        body: (
+          <div className="msg">
+            Level {effLevel} · {state.cols}×{state.rows} boxes — final: {names[0]}: {s0} ·{' '}
+            {names[1]}: {s1}.
+          </div>
+        )
+      });
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.over]);
+
+  const afterMove = (newState: DotsState) => {
+    // Bot moves run ONLY in vs-computer mode — never online (the opponent's
+    // moves arrive via net.remote) and never in hotseat. Finish now fires
+    // from the state effect above instead of from here.
     if (mode === 'pvc' && newState.turn % 2 === 1 && !newState.over) {
       setTimeout(() => {
         setState(prev => {
@@ -71,8 +138,22 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
       next.turn++;
     }
     setState(next);
+    if (net) net.push(JSON.parse(JSON.stringify(next)));
     afterMove(next);
   };
+
+  if (net && !net.remote && net.mySeat !== 0) {
+    return (
+      <div>
+        <div className="turn-banner">⏳ Waiting for {names[0]} to start…</div>
+        <PaperPanel>
+          <p className="muted text-center text-sm py-6">
+            The host is setting up the board. Your moves will appear here.
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
 
   /* ---------- the dot sheet (look: the printed Dots & Boxes pages) ---------- */
   const SP = 60; // spacing between dots
@@ -107,7 +188,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
             {names[1]}: {state.scores[1]}
           </span>
           <span className="chip">
-            🎚️ Level {level} · {cols}×{rows}
+            🎚️ Level {effLevel} · {cols}×{rows}
           </span>
           <span className="chip">
             {state.scores[0] + state.scores[1]}/{totalBoxes} boxes
@@ -118,7 +199,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
           viewBox={`0 0 ${W} ${H}`}
           style={{ width: '100%', height: 'auto', display: 'block' }}
           role="img"
-          aria-label={`Dots and Boxes board, level ${level}`}
+          aria-label={`Dots and Boxes board, level ${effLevel}`}
         >
           {/* claimed boxes: light wash + the player's mark, like initials on paper */}
           {state.boxes.map((o, bi) => {

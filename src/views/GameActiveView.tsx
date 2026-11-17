@@ -167,7 +167,13 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     switch (gameId) {
       case 'dots':
         return (
-          <DotsAndBoxes mode={mode} names={names} onFinish={handleFinish} level={dotsLevel} />
+          <DotsAndBoxes
+            mode={mode}
+            names={names}
+            onFinish={handleFinish}
+            level={dotsLevel}
+            net={netProp}
+          />
         );
       case 'ttt':
         return (
@@ -175,11 +181,23 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         );
       case 'hangman':
         return (
-          <Hangman mode={mode} names={names} onFinish={handleFinish} level={hangLevel} />
+          <Hangman
+            mode={mode}
+            names={names}
+            onFinish={handleFinish}
+            level={hangLevel}
+            net={netProp}
+          />
         );
       case 'sprouts':
         return (
-          <Sprouts mode={mode} names={names} onFinish={handleFinish} dots={sproutsDots} />
+          <Sprouts
+            mode={mode}
+            names={names}
+            onFinish={handleFinish}
+            dots={sproutsDots}
+            net={netProp}
+          />
         );
       case 'sim':
         return (
@@ -189,10 +207,13 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
             onFinish={handleFinish}
             dots={simDots}
             shape={simShape}
+            net={netProp}
           />
         );
       case 'bulls':
-        return <BullsAndCows mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <BullsAndCows mode={mode} names={names} onFinish={handleFinish} net={netProp} />
+        );
       case 'categories':
         return (
           <CategoriesGame mode={mode} names={names} onFinish={handleFinish} />
@@ -207,10 +228,12 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         );
       case 'wordsearch':
         return (
-          <WordSearchGame mode={mode} names={names} onFinish={handleFinish} />
+          <WordSearchGame mode={mode} names={names} onFinish={handleFinish} net={netProp} />
         );
       case 'ghost':
-        return <GhostGame mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <GhostGame mode={mode} names={names} onFinish={handleFinish} net={netProp} />
+        );
       case 'ladder':
         return (
           <WordLadderGame mode={mode} names={names} onFinish={handleFinish} />

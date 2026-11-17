@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GameMode, FinishResult } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameMode, FinishResult, NetGameProp } from '../types';
 import { Logic, pickA, simPositions, SimShape } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -11,6 +11,10 @@ interface SimGameProps {
   // Chosen on the option screen BEFORE the game starts.
   dots?: number;
   shape?: SimShape;
+  // Live-room sync — present only in online mode. Follows the TicTacToe
+  // reference pattern: serialize the full local state after every move,
+  // apply remote state when it arrives, gate turns by mySeat.
+  net?: NetGameProp;
 }
 
 const SHAPE_LABEL: Record<SimShape, string> = {
@@ -19,9 +23,23 @@ const SHAPE_LABEL: Record<SimShape, string> = {
   scatter: 'Scatter'
 };
 
-export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, shape }) => {
-  const count = Math.max(6, Math.min(10, dots || 6));
-  const boardShape: SimShape = shape || 'ring';
+interface SimState {
+  edges: Record<string, number>;
+  turn: number;
+  over: boolean;
+  dots: number;
+  shape: SimShape;
+}
+
+const VALID_SHAPES: SimShape[] = ['ring', 'grid', 'scatter'];
+
+export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, shape, net }) => {
+  // Dots/shape live in state (not props-derived consts) so the host's
+  // opening push can set the guest's board: the guest's own dots/shape
+  // props come from their saved option-screen choice, which may differ
+  // from the host's. In pvc/hotseat they never change mid-game.
+  const [count, setCount] = useState<number>(() => Math.max(6, Math.min(10, dots || 6)));
+  const [boardShape, setBoardShape] = useState<SimShape>(() => shape || 'ring');
   const POS = simPositions(count, boardShape);
   const totalPairs = (count * (count - 1)) / 2;
   const [turn, setTurn] = useState<number>(0);
@@ -30,35 +48,78 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
   const [edges, setEdges] = useState<Record<string, number>>({});
 
   const cur = turn % names.length;
-  const isMine = mode === 'pvc' ? cur === 0 : true;
+  const isMine = net ? cur === net.mySeat : mode === 'pvc' ? cur === 0 : true;
 
-  const checkEnd = (currentEdges: Record<string, number>, lastSeat: number) => {
-    const mineEdges = Object.keys(currentEdges).filter(
-      k => currentEdges[k] === lastSeat
-    );
-    const tri = Logic.simHasTriangle(mineEdges);
-    if (tri) {
-      setOver(true);
-      const winner = 1 - lastSeat;
-      setTimeout(() => {
+  // --- net sync -----------------------------------------------------------
+  const serialize = (): SimState => ({ edges, turn, over, dots: count, shape: boardShape });
+  const localJson = useRef('');
+  localJson.current = JSON.stringify(serialize());
+  const pushedInit = useRef(false);
+  const finishFired = useRef(false);
+
+  // Host publishes the opening state once; the guest waits for it.
+  // The opening state carries the host's dots count and shape so both
+  // phones play the same board.
+  useEffect(() => {
+    if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
+      pushedInit.current = true;
+      net.push({ edges: {}, turn: 0, over: false, dots: count, shape: boardShape });
+    }
+    // Only on mount: the host's opening push must fire exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply the opponent's move when remote state arrives (skip our own echo).
+  useEffect(() => {
+    if (!net || !net.remote) return;
+    const incoming = JSON.stringify(net.remote);
+    if (incoming === localJson.current) return;
+    const s = net.remote as SimState;
+    if (s.edges && typeof s.edges === 'object') setEdges({ ...s.edges });
+    if (typeof s.turn === 'number') setTurn(s.turn);
+    if (typeof s.over === 'boolean') setOver(s.over);
+    if (typeof s.dots === 'number') setCount(Math.max(6, Math.min(10, s.dots)));
+    if (typeof s.shape === 'string' && (VALID_SHAPES as string[]).includes(s.shape)) {
+      setBoardShape(s.shape);
+    }
+    // A line drawn on the other phone invalidates any dot we had selected.
+    setSel(-1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [net ? net.remote : null]);
+
+  // Finish fires from state (local move OR remote apply), once, both sides.
+  // Both phones compute the same result from the shared state: whoever
+  // completed a triangle in their own color loses; a full board means the
+  // player with no move left loses, so the last mover wins.
+  useEffect(() => {
+    if (!over || finishFired.current) return;
+    finishFired.current = true;
+    const t = setTimeout(() => {
+      let loser = -1;
+      let tri: [number, number, number] | null = null;
+      for (const seat of [0, 1]) {
+        const mineEdges = Object.keys(edges).filter(k => edges[k] === seat);
+        const found = Logic.simHasTriangle(mineEdges);
+        if (found) {
+          loser = seat;
+          tri = found;
+          break;
+        }
+      }
+      if (loser >= 0 && tri) {
+        const winner = 1 - loser;
         onFinish({
           winner,
           title: `${names[winner]} wins!`,
           body: (
             <div className="msg">
-              {names[lastSeat]} completed a triangle in their own color (
+              {names[loser]} completed a triangle in their own color (
               {tri.map(x => x + 1).join('-')}) and loses!
             </div>
           )
         });
-      }, 400);
-      return true;
-    }
-
-    const freeCount = totalPairs - Object.keys(currentEdges).length;
-    if (freeCount === 0) {
-      setOver(true);
-      setTimeout(() => {
+      } else {
+        const lastSeat = (turn - 1 + names.length) % names.length;
         onFinish({
           winner: lastSeat,
           title: `${names[lastSeat]} wins!`,
@@ -68,7 +129,25 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
             </div>
           )
         });
-      }, 400);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [over]);
+
+  // Pure end check: only flips `over`. The finish effect above reports it.
+  const evaluateEnd = (currentEdges: Record<string, number>, lastSeat: number): boolean => {
+    const mineEdges = Object.keys(currentEdges).filter(
+      k => currentEdges[k] === lastSeat
+    );
+    if (Logic.simHasTriangle(mineEdges)) {
+      setOver(true);
+      return true;
+    }
+
+    const freeCount = totalPairs - Object.keys(currentEdges).length;
+    if (freeCount === 0) {
+      setOver(true);
       return true;
     }
     return false;
@@ -94,10 +173,14 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
     setSel(-1);
     const seat = cur;
     const nextEdges = { ...edges, [`${a}-${b}`]: seat };
+    const nextTurn = turn + 1;
+    const ended = evaluateEnd(nextEdges, seat);
     setEdges(nextEdges);
-    setTurn(t => t + 1);
-
-    if (checkEnd(nextEdges, seat)) return;
+    setTurn(nextTurn);
+    if (net) {
+      net.push({ edges: nextEdges, turn: nextTurn, over: ended, dots: count, shape: boardShape });
+    }
+    if (ended) return;
 
     if (mode === 'pvc') {
       setTimeout(() => {
@@ -119,12 +202,25 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
           const botNext = { ...prevEdges, [`${ba}-${bb}`]: 1 };
           Sound.click();
           setTurn(t => t + 1);
-          checkEnd(botNext, 1);
+          evaluateEnd(botNext, 1);
           return botNext;
         });
       }, 600);
     }
   };
+
+  if (net && !net.remote && net.mySeat !== 0) {
+    return (
+      <div>
+        <div className="turn-banner">⏳ Waiting for host…</div>
+        <PaperPanel>
+          <p className="muted text-center text-sm py-6">
+            {names[0]} is setting up the board. Your moves will appear here.
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
 
   return (
     <div>

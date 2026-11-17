@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { GameMode, FinishResult } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { GameMode, FinishResult, NetGameProp } from '../types';
 import { WS_PUZZLES, WSPuzzle } from '../data/wordsearch';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -8,6 +8,26 @@ interface WordSearchGameProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Live-room sync — present only in online mode. Same pattern as TicTacToe:
+  // serialize the full local state after every found word, apply remote state
+  // when it arrives, gate turns by mySeat. The shared puzzle is puzzleIdx
+  // (the grid + word list derive from it, so neither is sent over the wire).
+  net?: NetGameProp;
+}
+
+// Full shared state, one plain JSON object. `turn` and `over` are always
+// top-level (the room doc needs them). `foundBy` records the seat that found
+// each word in `found` (parallel arrays) so both phones compute the same
+// winner from `counts`. `done` (localStorage checklist) is per-device and is
+// NEVER serialized; `elapsed` is a local display timer, also not synced.
+interface WsNetState {
+  puzzleIdx: number;
+  found: string[];
+  foundBy: number[];
+  foundCells: Record<string, boolean>;
+  counts: [number, number];
+  turn: number;
+  over: boolean;
 }
 
 const DONE_KEY = 'pg_ws_done_v1';
@@ -74,19 +94,110 @@ const findCells = (pz: WSPuzzle, w: string): [number, number][] | null => {
   return null;
 };
 
-export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
+export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onFinish, net }) => {
   const [done, setDone] = useState<Set<number>>(() => loadDone());
   const [puzzleIdx, setPuzzleIdx] = useState<number>(-1);
   const [page, setPage] = useState(0);
   const [jump, setJump] = useState('');
   const [found, setFound] = useState<string[]>([]);
+  const [foundBy, setFoundBy] = useState<number[]>([]);
   const [foundCells, setFoundCells] = useState<Record<string, boolean>>({});
+  const [counts, setCounts] = useState<[number, number]>([0, 0]);
+  const [turn, setTurn] = useState<number>(0);
   const [sel, setSel] = useState<[number, number] | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [over, setOver] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const pz: WSPuzzle | null = puzzleIdx >= 0 ? WS_PUZZLES[puzzleIdx] : null;
+
+  const cur = turn % names.length;
+  // Online: only the seat whose turn it is may hunt. Solo / PvC / hotseat:
+  // unchanged — anyone tapping (it's one device) may find words.
+  const isMine = net ? cur === net.mySeat : true;
+
+  // --- net sync (mirrors TicTacToe) ---------------------------------------
+  const serialize = (): WsNetState => ({
+    puzzleIdx,
+    found: [...found],
+    foundBy: [...foundBy],
+    foundCells: { ...foundCells },
+    counts: [counts[0], counts[1]],
+    turn,
+    over
+  });
+  const localJson = useRef('');
+  localJson.current = JSON.stringify(serialize());
+  const pushedInit = useRef(false);
+  const finishFired = useRef(false);
+
+  // Host publishes the opening state once; the guest waits for it. At mount
+  // no puzzle is picked yet (puzzleIdx -1) — the host picks the shared puzzle
+  // from the checklist below, and startPuzzle pushes that choice.
+  useEffect(() => {
+    if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
+      pushedInit.current = true;
+      net.push({ puzzleIdx: -1, found: [], foundBy: [], foundCells: {}, counts: [0, 0], turn: 0, over: false });
+    }
+    // Only on mount: the host's opening push must fire exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply the opponent's move when remote state arrives (skip our own echo).
+  useEffect(() => {
+    if (!net || !net.remote) return;
+    const incoming = JSON.stringify(net.remote);
+    if (incoming === localJson.current) return;
+    const s = net.remote as WsNetState;
+    if (typeof s.puzzleIdx === 'number' && s.puzzleIdx !== puzzleIdx) {
+      setElapsed(0);
+      setSel(null);
+      setErrorMsg('');
+      finishFired.current = false;
+    }
+    if (s.over === false) finishFired.current = false;
+    if (typeof s.puzzleIdx === 'number' && s.puzzleIdx >= -1 && s.puzzleIdx < WS_PUZZLES.length) setPuzzleIdx(s.puzzleIdx);
+    if (Array.isArray(s.found)) setFound([...s.found]);
+    if (Array.isArray(s.foundBy)) setFoundBy([...s.foundBy]);
+    if (s.foundCells && typeof s.foundCells === 'object') setFoundCells({ ...s.foundCells });
+    if (Array.isArray(s.counts) && s.counts.length === 2) setCounts([s.counts[0] || 0, s.counts[1] || 0]);
+    if (typeof s.turn === 'number') setTurn(s.turn);
+    if (typeof s.over === 'boolean') setOver(s.over);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [net ? net.remote : null]);
+
+  // Finish fires from state (local move OR remote apply), once, both sides.
+  // Winner = whoever found more words; a tie is a draw. (The original
+  // single-file build hardcoded the winner to seat 0 — the host won every
+  // online game no matter who found the words — so this follows the task's
+  // stated rule instead of that bug.)
+  useEffect(() => {
+    if (!net || !over || !pz || finishFired.current) return;
+    finishFired.current = true;
+    const t = setTimeout(() => {
+      const winner = counts[0] === counts[1] ? -1 : counts[0] > counts[1] ? 0 : 1;
+      onFinish({
+        winner,
+        title:
+          winner === -1
+            ? '🤝 Draw — dead even!'
+            : `🏆 ${names[winner] || 'Player ' + (winner + 1)} found the most words!`,
+        body: (
+          <div className="paper my-2">
+            <p>
+              All {pz.words.length} words found on puzzle #{pz.id} —{' '}
+              <b>
+                {names[0] || 'Player 1'} {counts[0]} · {names[1] || 'Player 2'} {counts[1]}
+              </b>
+              .
+            </p>
+          </div>
+        )
+      });
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [over]);
 
   useEffect(() => {
     if (!pz || over) return;
@@ -103,6 +214,15 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
     setElapsed(0);
     setOver(false);
     setErrorMsg('');
+    if (net) {
+      // Host picks the shared puzzle: reset the race and push it so the
+      // guest's grid, word list, scores and turn all come from this state.
+      finishFired.current = false;
+      setFoundBy([]);
+      setCounts([0, 0]);
+      setTurn(0);
+      net.push({ puzzleIdx: idx, found: [], foundBy: [], foundCells: {}, counts: [0, 0], turn: 0, over: false });
+    }
   };
 
   const finishPuzzle = (idx: number, secs: number) => {
@@ -132,6 +252,12 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
 
   const handleCellClick = (r: number, c: number) => {
     if (!pz || over) return;
+    // Online: only the seat whose turn it is may hunt. (The original build
+    // had no turn gate at all — both phones raced freely — but a free race
+    // lets two simultaneous finds overwrite each other in the shared state,
+    // and the task's turn-gating rule is the fix: the turn alternates to the
+    // other seat after every found word.)
+    if (net && !isMine) return;
     setErrorMsg('');
     if (!sel) {
       Sound.click();
@@ -169,6 +295,23 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
         setFound(nextFound);
         setFoundCells(nextCells);
         setSel(null);
+        if (net) {
+          // Race point goes to the finder (cur === mySeat here, gated above);
+          // the turn then alternates, and the synchronously computed next
+          // state is pushed so the other phone applies it verbatim.
+          const nextBy = [...foundBy, cur];
+          const nextCounts: [number, number] = [counts[0], counts[1]];
+          nextCounts[cur] = nextCounts[cur] + 1;
+          const nextTurn = turn + 1;
+          const ended = nextFound.length >= pz.words.length;
+          setFoundBy(nextBy);
+          setCounts(nextCounts);
+          setTurn(nextTurn);
+          if (ended) setOver(true);
+          net.push({ puzzleIdx, found: nextFound, foundBy: nextBy, foundCells: nextCells, counts: nextCounts, turn: nextTurn, over: ended });
+          // Finish fires from state via the effect above, on both phones.
+          return;
+        }
         if (nextFound.length >= pz.words.length) finishPuzzle(puzzleIdx, elapsed);
         return;
       }
@@ -179,7 +322,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
   };
 
   const handleReveal = () => {
-    if (!pz) return;
+    if (!pz || net) return; // online: one side must not end the shared race as a tie
     Sound.click();
     const allCells: Record<string, boolean> = { ...foundCells };
     pz.words.forEach(w => {
@@ -211,6 +354,34 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
     }, 700);
   };
 
+  /* ---------- online waiting ---------- */
+  if (net && !net.remote && net.mySeat !== 0) {
+    return (
+      <div>
+        <div className="turn-banner">⏳ Waiting for host…</div>
+        <PaperPanel>
+          <p className="muted text-center text-sm py-6">
+            The host is picking the shared puzzle. Your moves will appear here.
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
+  // Host has connected but not picked a puzzle yet — the guest still waits;
+  // otherwise the guest would see the host's checklist and could pick too.
+  if (net && net.mySeat !== 0 && puzzleIdx < 0) {
+    return (
+      <div>
+        <div className="turn-banner">⏳ Waiting for host to pick a puzzle…</div>
+        <PaperPanel>
+          <p className="muted text-center text-sm py-6">
+            {names[0] || 'The host'} is choosing the puzzle you will both race on.
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
+
   /* ---------- checklist screen ---------- */
   if (!pz) {
     const pages = Math.ceil(WS_PUZZLES.length / PAGE);
@@ -222,6 +393,12 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
     return (
       <PaperPanel>
         <h3 className="font-bold text-lg mb-1">🔎 Word Search Checklist</h3>
+        {net && (
+          <p className="text-sm mb-2">
+            🌐 <b>Online race</b> — pick the puzzle you both hunt on. You take turns
+            finding words; most words found wins.
+          </p>
+        )}
         <p className="text-sm muted mb-2">
           <b>{done.size}</b> of <b>{WS_PUZZLES.length}</b> puzzles cleared. Every 100
           puzzles the grid gets bigger and the words hide in sneakier directions. Finished
@@ -339,6 +516,16 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
     pz.size >= 14 ? 15 : 16;
   return (
     <div>
+      {net && (
+        <div className="turn-banner">
+          {over
+            ? 'Game Over'
+            : isMine
+            ? `🟢 Your move — ${names[cur] || 'Player ' + (cur + 1)}`
+            : `⏳ ${names[cur] || 'Player ' + (cur + 1)} to move`}
+          {` · 🔎 ${names[0] || 'Player 1'} ${counts[0]} · ${names[1] || 'Player 2'} ${counts[1]}`}
+        </div>
+      )}
       <PaperPanel>
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-bold text-[#17457e]">
@@ -388,13 +575,15 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
         </div>
 
         <p className="muted text-xs text-center mb-3">
-          {sel
+          {net && !isMine && !over
+            ? `⏳ ${names[cur] || 'Player ' + (cur + 1)} is hunting — ${found.length}/${pz.words.length} found.`
+            : sel
             ? 'First letter picked — now tap the LAST letter of the word.'
             : `Tap the first letter of a hidden word. ${found.length}/${pz.words.length} found.`}
         </p>
 
         <div className="space-y-2">
-          <button onClick={handleReveal} className="btn secondary">
+          <button onClick={handleReveal} className="btn secondary" disabled={!!net}>
             👀 Reveal all words (no checklist credit)
           </button>
           <button
@@ -403,6 +592,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ onFinish }) => {
               setPuzzleIdx(-1);
             }}
             className="btn secondary"
+            disabled={!!net}
           >
             🗂️ Back to checklist
           </button>
