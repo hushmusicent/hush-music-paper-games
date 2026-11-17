@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppStore } from '../utils/store';
+import { Backend, OnlineChat } from '../utils/net';
 import { ChatMessage, User } from '../types';
 import { Sound } from '../utils/sound';
 
@@ -9,15 +10,25 @@ interface ChatBoxProps {
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = ({ chatPath, user }) => {
+  // Live in a real online room (pg_chats/room_<code>); localStorage
+  // everywhere else. Chat lives ONLY inside a live game — there is no
+  // lobby chat, by design.
+  const live = Backend.mode === 'firebase' && chatPath.startsWith('room_');
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    AppStore.getChat(chatPath)
+    live ? [] : AppStore.getChat(chatPath)
   );
   const [inputVal, setInputVal] = useState('');
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (live) {
+      const off = OnlineChat.listen(chatPath, incoming => {
+        setMessages(incoming.map(m => ({ who: m.who, text: m.text, at: m.at })));
+      });
+      return off;
+    }
     setMessages(AppStore.getChat(chatPath));
-  }, [chatPath]);
+  }, [chatPath, live]);
 
   useEffect(() => {
     if (logRef.current) {
@@ -29,8 +40,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ chatPath, user }) => {
     const text = inputVal.trim();
     if (!text || !user) return;
     Sound.click();
-    const updated = AppStore.sendChat(chatPath, user.username, text);
-    setMessages(updated);
+    if (live) {
+      OnlineChat.send(chatPath, user.username, user.uid, text);
+    } else {
+      const updated = AppStore.sendChat(chatPath, user.username, text);
+      setMessages(updated);
+    }
     setInputVal('');
   };
 

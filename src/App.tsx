@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameId, GameMode, User } from './types';
 import { AppStore } from './utils/store';
+import { Backend, Net, NetAuth, OnlinePoints, Voice } from './utils/net';
 import { Sound } from './utils/sound';
 
 import { Header } from './components/Header';
@@ -43,6 +44,28 @@ export const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // Boot the online layer once: if Firebase keys were pasted in Profile →
+  // Setup, this flips the app into online mode and restores the signed-in
+  // session. Demo mode needs nothing and works fully offline.
+  useEffect(() => {
+    const off = NetAuth.onUser(u => {
+      setUser(u);
+      if (u) {
+        if (Backend.mode === 'firebase') {
+          OnlinePoints.get(u.uid).then(setPoints).catch(() => {});
+        } else {
+          setPoints(AppStore.getPoints(u.uid));
+        }
+      } else {
+        setPoints(0);
+      }
+    });
+    Backend.init().then(ok => {
+      if (ok && NetAuth.user) setUser(NetAuth.user);
+    });
+    return off;
+  }, []);
+
   // Quit modal confirmation when clicking bottom nav while in game
   const [pendingNavTab, setPendingNavTab] = useState<NavTab | null>(null);
 
@@ -60,7 +83,10 @@ export const App: React.FC = () => {
   };
 
   const refreshPoints = () => {
-    if (user) {
+    if (!user) return;
+    if (Backend.mode === 'firebase') {
+      OnlinePoints.get(user.uid).then(setPoints).catch(() => {});
+    } else {
       setPoints(AppStore.getPoints(user.uid));
     }
   };
@@ -81,6 +107,10 @@ export const App: React.FC = () => {
 
   const handleConfirmQuitToTab = () => {
     if (pendingNavTab) {
+      if (currentView === 'game_active' && gameMode === 'online') {
+        Voice.leave();
+        Net.leave(true);
+      }
       setCurrentView(pendingNavTab);
       setPendingNavTab(null);
       setSelectedGame(null);
@@ -99,6 +129,17 @@ export const App: React.FC = () => {
     setRoomCode(rCode);
     setCurrentView('game_active');
     window.scrollTo(0, 0);
+  };
+
+  // Leaving a live room: silent leave keeps the room so the player can
+  // rejoin with the same code; voice drops with the game.
+  const quitGame = () => {
+    if (gameMode === 'online') {
+      Voice.leave();
+      Net.leave(true);
+    }
+    setCurrentView('game_mode');
+    setRoomCode(undefined);
   };
 
   return (
@@ -133,7 +174,16 @@ export const App: React.FC = () => {
           <GameModeView
             gameId={selectedGame}
             onBack={() => setCurrentView('home')}
-            onSelectMode={mode => handleStartGame(mode)}
+            onSelectMode={mode => {
+              // 'online' goes to the lobby (create/join a room) — never
+              // straight into a game with no room.
+              if (mode === 'online') {
+                setCurrentView('lobby');
+                window.scrollTo(0, 0);
+              } else {
+                handleStartGame(mode);
+              }
+            }}
             onBrowseRooms={() => setCurrentView('rooms')}
             onOnlineLobby={() => setCurrentView('lobby')}
             onDotsLevel={setDotsLevel}
@@ -157,10 +207,7 @@ export const App: React.FC = () => {
             sproutsDots={sproutsDots}
             simDots={simDots}
             simShape={simShape}
-            onQuit={() => {
-              setCurrentView('game_mode');
-              setRoomCode(undefined);
-            }}
+            onQuit={quitGame}
             onPointsUpdated={refreshPoints}
           />
         )}
@@ -170,8 +217,13 @@ export const App: React.FC = () => {
             gameId={selectedGame}
             onBack={() => setCurrentView('game_mode')}
             onJoinRoom={code => {
-              showToast(`Joined demo room ${code}!`);
-              handleStartGame('hotseat', code);
+              if (Backend.mode === 'firebase') {
+                showToast(`Joined room ${code}!`);
+                handleStartGame('online', code);
+              } else {
+                showToast(`Joined demo room ${code}!`);
+                handleStartGame('hotseat', code);
+              }
             }}
           />
         )}
@@ -182,8 +234,13 @@ export const App: React.FC = () => {
             user={user}
             onBack={() => setCurrentView('game_mode')}
             onStartRoomGame={code => {
-              showToast(`Demo room ${code} ready`);
-              handleStartGame('hotseat', code);
+              if (Backend.mode === 'firebase') {
+                showToast(`Room ${code} — game on!`);
+                handleStartGame('online', code);
+              } else {
+                showToast(`Demo room ${code} ready`);
+                handleStartGame('hotseat', code);
+              }
             }}
           />
         )}
@@ -196,6 +253,9 @@ export const App: React.FC = () => {
           <ProfileView
             user={user}
             onLogout={() => {
+              if (Backend.mode === 'firebase') {
+                NetAuth.logout();
+              }
               AppStore.logout();
               setUser(null);
               setPoints(0);

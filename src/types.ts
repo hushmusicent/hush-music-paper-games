@@ -74,6 +74,19 @@ export interface FinishResult {
   pts?: number;
 }
 
+// Live-room sync prop, passed to a game only in online mode. The game
+// serializes its FULL local state (board + turn + over, whatever it holds)
+// into one plain JSON object after every move via push(); when the opponent
+// moves, remote carries their serialized state and the game applies it.
+// mySeat is this device's seat (0 = host/X/first, 1 = guest/O/second).
+// Games that do not take this prop play hotseat-style in an online room
+// (chat + voice still live) — see the 7 party games.
+export interface NetGameProp {
+  mySeat: number;
+  remote: any | null;
+  push: (serialized: any) => void;
+}
+
 export interface GameContext<S = any> {
   gameId: GameId;
   mode: GameMode;

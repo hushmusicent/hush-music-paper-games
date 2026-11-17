@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GameMode, FinishResult } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { GameMode, FinishResult, NetGameProp } from '../types';
 import { Logic } from '../utils/logic';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -8,53 +8,91 @@ interface TicTacToeProps {
   mode: GameMode;
   names: string[];
   onFinish: (result: FinishResult) => void;
+  // Live-room sync — present only in online mode. Reference implementation
+  // for the other head-to-head games: serialize the full local state after
+  // every move, apply remote state when it arrives, gate turns by mySeat.
+  net?: NetGameProp;
 }
 
-export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish }) => {
-  const [board, setBoard] = useState<string[]>(Array(9).fill(''));
+interface TttState {
+  board: string[];
+  turn: number;
+  over: boolean;
+}
+
+const EMPTY: TttState = { board: Array(9).fill(''), turn: 0, over: false };
+
+export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish, net }) => {
+  const [board, setBoard] = useState<string[]>(() => [...EMPTY.board]);
   const [turn, setTurn] = useState<number>(0);
   const [over, setOver] = useState<boolean>(false);
 
   const cur = turn % names.length;
-  const isMine = mode === 'pvc' ? cur === 0 : true;
+  const isMine = net ? cur === net.mySeat : mode === 'pvc' ? cur === 0 : true;
 
-  const checkEnd = (nextBoard: string[]) => {
-    const w = Logic.tttWin(nextBoard);
-    if (w === 'X') {
-      setOver(true);
-      setTimeout(() => {
+  // --- net sync -----------------------------------------------------------
+  const serialize = (): TttState => ({ board, turn, over });
+  const localJson = useRef('');
+  localJson.current = JSON.stringify(serialize());
+  const pushedInit = useRef(false);
+  const finishFired = useRef(false);
+
+  // Host publishes the opening state once; the guest waits for it.
+  useEffect(() => {
+    if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
+      pushedInit.current = true;
+      net.push({ ...EMPTY, board: [...EMPTY.board] });
+    }
+    // Only on mount: the host's opening push must fire exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply the opponent's move when remote state arrives (skip our own echo).
+  useEffect(() => {
+    if (!net || !net.remote) return;
+    const incoming = JSON.stringify(net.remote);
+    if (incoming === localJson.current) return;
+    const s = net.remote as TttState;
+    if (Array.isArray(s.board) && s.board.length === 9) setBoard([...s.board]);
+    if (typeof s.turn === 'number') setTurn(s.turn);
+    if (typeof s.over === 'boolean') setOver(s.over);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [net ? net.remote : null]);
+
+  // Finish fires from state (local move OR remote apply), once, both sides.
+  useEffect(() => {
+    if (!over || finishFired.current) return;
+    finishFired.current = true;
+    const t = setTimeout(() => {
+      const w = Logic.tttWin(board);
+      if (w === 'X') {
         onFinish({
           winner: 0,
           title: `${names[0]} wins!`,
           body: <div className="msg">Three in a row for X!</div>
         });
-      }, 350);
-      return true;
-    }
-    if (w === 'O') {
-      setOver(true);
-      setTimeout(() => {
+      } else if (w === 'O') {
         onFinish({
           winner: 1,
           title: `${names[1]} wins!`,
           body: <div className="msg">Three in a row for O!</div>
         });
-      }, 350);
-      return true;
-    }
-    if (w === 'draw') {
-      setOver(true);
-      setTimeout(() => {
+      } else {
         onFinish({
           winner: -1,
           title: 'Draw!',
-          body: (
-            <div className="msg">
-              A cat's game — nobody got three in a row.
-            </div>
-          )
+          body: <div className="msg">A cat's game — nobody got three in a row.</div>
         });
-      }, 350);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [over]);
+
+  const checkEnd = (nextBoard: string[]): boolean => {
+    const w = Logic.tttWin(nextBoard);
+    if (w === 'X' || w === 'O' || w === 'draw') {
+      setOver(true);
       return true;
     }
     return false;
@@ -65,10 +103,12 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish }) =
     Sound.click();
     const nextBoard = [...board];
     nextBoard[i] = cur === 0 ? 'X' : 'O';
+    const nextTurn = turn + 1;
+    const ended = checkEnd(nextBoard);
     setBoard(nextBoard);
-    setTurn(t => t + 1);
-
-    if (checkEnd(nextBoard)) return;
+    setTurn(nextTurn);
+    if (net) net.push({ board: nextBoard, turn: nextTurn, over: ended });
+    if (ended) return;
 
     if (mode === 'pvc') {
       setTimeout(() => {
@@ -84,6 +124,19 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish }) =
       }, 500);
     }
   };
+
+  if (net && !net.remote && net.mySeat !== 0) {
+    return (
+      <div>
+        <div className="turn-banner">⏳ Waiting for {names[0]} to start…</div>
+        <PaperPanel>
+          <p className="muted text-center text-sm py-6">
+            The host is setting up the board. Your moves will appear here.
+          </p>
+        </PaperPanel>
+      </div>
+    );
+  }
 
   return (
     <div>

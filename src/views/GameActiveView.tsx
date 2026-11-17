@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { GameId, GameMode, User, FinishResult } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { GameId, GameMode, User, FinishResult, NetGameProp } from '../types';
 import { GAMES_METADATA } from '../data/games';
 import { AppStore } from '../utils/store';
+import { Net, OnlinePoints, RoomDoc } from '../utils/net';
 import { VoiceBar } from '../components/VoiceBar';
 import { ChatBox } from '../components/ChatBox';
 import { Modal } from '../components/Modal';
@@ -52,10 +53,43 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   onPointsUpdated
 }) => {
   const g = GAMES_METADATA[gameId];
-  const [names] = useState<string[]>(() => {
+
+  // Live room session (online mode only): the room doc is the shared truth.
+  const [room, setRoom] = useState<RoomDoc | null>(() => Net.room);
+  const mySeat = mode === 'online' && room ? room.seats.indexOf(user.uid) : -1;
+
+  useEffect(() => {
+    if (mode !== 'online') return;
+    if (roomCode && (!Net.room || Net.room.code !== roomCode)) Net.listen(roomCode);
+    const off = Net.onRoom(setRoom);
+    return off;
+  }, [mode, roomCode]);
+
+  // Names come from the room in online mode (seat order = names order).
+  const names = useMemo(() => {
     if (mode === 'pvc') return [user.username, 'Computer 🤖'];
+    if (mode === 'online' && room) {
+      return room.seats.map((uid, i) => room.names[uid] || 'Player ' + (i + 1));
+    }
     return ['Player 1', 'Player 2'];
-  });
+  }, [mode, room, user.username]);
+
+  // The sync prop handed to head-to-head games. Each game's serialize()
+  // must carry `turn` and `over` top-level so the room doc stays truthful.
+  const netProp: NetGameProp | undefined = useMemo(() => {
+    if (mode !== 'online' || !room) return undefined;
+    return {
+      mySeat,
+      remote: room.state ?? null,
+      push: (serialized: any) => {
+        Net.push({
+          state: serialized,
+          turn: typeof serialized.turn === 'number' ? serialized.turn : room.turn,
+          status: serialized.over ? 'over' : 'playing'
+        });
+      }
+    };
+  }, [mode, room, mySeat]);
 
   const [quitModalOpen, setQuitModalOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
@@ -76,20 +110,38 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     } else {
       recordRes = result.winner === 0 ? 'w' : 'l';
     }
+    // Online, the winner is a SEAT, not "player 1": a guest win is a win
+    // on the guest's phone too. (Games report winner as a seat index.)
+    if (mode === 'online' && result.winner >= 0) {
+      recordRes = result.winner === mySeat ? 'w' : 'l';
+      earnedPts = recordRes === 'w' ? payout : 0;
+    }
 
     if (recordRes === 'w') {
       earnedPts = earnedPts || payout;
-      AppStore.addPoints(user.uid, earnedPts);
+      if (mode === 'online') {
+        OnlinePoints.add(user.uid, earnedPts);
+      } else {
+        AppStore.addPoints(user.uid, earnedPts);
+      }
       Sound.win();
     } else if (recordRes === 'l') {
       Sound.lose();
     } else if (result.pts) {
       earnedPts = result.pts;
-      AppStore.addPoints(user.uid, earnedPts);
+      if (mode === 'online') {
+        OnlinePoints.add(user.uid, earnedPts);
+      } else {
+        AppStore.addPoints(user.uid, earnedPts);
+      }
     }
 
     if (recordRes && mode !== 'hotseat') {
-      AppStore.recordResult(user.uid, gameId, recordRes);
+      if (mode === 'online') {
+        OnlinePoints.record(user.uid, gameId, recordRes);
+      } else {
+        AppStore.recordResult(user.uid, gameId, recordRes);
+      }
     }
 
     onPointsUpdated();
@@ -102,6 +154,12 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
   const handlePlayAgain = () => {
     Sound.click();
+    // Online, a rematch is a new room — the finished room stays 'over'
+    // so the other phone is not yanked into a fresh game mid-result.
+    if (mode === 'online') {
+      onQuit();
+      return;
+    }
     setFinished(null);
   };
 
@@ -112,7 +170,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
           <DotsAndBoxes mode={mode} names={names} onFinish={handleFinish} level={dotsLevel} />
         );
       case 'ttt':
-        return <TicTacToe mode={mode} names={names} onFinish={handleFinish} />;
+        return (
+          <TicTacToe mode={mode} names={names} onFinish={handleFinish} net={netProp} />
+        );
       case 'hangman':
         return (
           <Hangman mode={mode} names={names} onFinish={handleFinish} level={hangLevel} />
@@ -259,9 +319,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         )}
       </h2>
 
-      <VoiceBar
-        roomName={`paper-${gameId}${roomCode ? `-${roomCode}` : ''}`}
-      />
+      <VoiceBar roomCode={roomCode} user={user} />
 
       {/* The Active Game */}
       <div>{renderGame()}</div>

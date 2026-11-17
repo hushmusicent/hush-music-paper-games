@@ -199,7 +199,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
             SIM
           </h3>
           <p className="text-center text-xs text-[#5a6a86] mb-3">
-            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Pick 6 to 10
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : pendingMode === 'online' ? '🌐 Online PvP' : '👥 Pass &amp; Play'} · Pick 6 to 10
             dots and a board shape.
           </p>
 
@@ -288,7 +288,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
             SPROUTS
           </h3>
           <p className="text-center text-xs text-[#5a6a86] mb-3">
-            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Pick 3 to 20
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : pendingMode === 'online' ? '🌐 Online PvP' : '👥 Pass &amp; Play'} · Pick 3 to 20
             starting dots. More dots = a longer, twistier game.
           </p>
 
@@ -371,7 +371,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
             HANGMAN
           </h3>
           <p className="text-center text-xs text-[#5a6a86] mb-3">
-            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · 3,000 words in
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : pendingMode === 'online' ? '🌐 Online PvP' : '👥 Pass &amp; Play'} · 3,000 words in
             10 levels — 300 words in every level. Higher level = longer, harder words.
           </p>
 
@@ -448,7 +448,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
             DOTS &amp; BOXES
           </h3>
           <p className="text-center text-xs text-[#5a6a86] mb-3">
-            {pendingMode === 'pvc' ? '🤖 Vs Computer' : '👥 Pass &amp; Play'} · Higher level = a
+            {pendingMode === 'pvc' ? '🤖 Vs Computer' : pendingMode === 'online' ? '🌐 Online PvP' : '👥 Pass &amp; Play'} · Higher level = a
             bigger sheet of dots — every level has more dots than the one before it. Level 1 starts at 2×2 boxes (9 dots), Level 50 tops out at 14×14 boxes (225 dots).
           </p>
 
@@ -542,10 +542,7 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           👥 Pass &amp; Play ({pmin}–{pmax} players, one phone)
         </button>
         <button
-          onClick={() => {
-            Sound.click();
-            onOnlineLobby();
-          }}
+          onClick={() => chooseMode('online')}
           className="btn secondary"
         >
           🌐 Online PvP (room code)

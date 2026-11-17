@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, GameId } from '../types';
 import { GAMES_METADATA } from '../data/games';
 import { AppStore, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from '../utils/store';
+import { Backend, NetAuth, OnlinePoints } from '../utils/net';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
 
@@ -23,16 +25,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [liErr, setLiErr] = useState('');
 
   const [suUser, setSuUser] = useState('');
+  const [suEmail, setSuEmail] = useState('');
   const [suPw, setSuPw] = useState('');
   const [suErr, setSuErr] = useState('');
 
   const [bonusClaimedNotice, setBonusClaimedNotice] = useState(false);
+  const [canClaimFb, setCanClaimFb] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Online points/daily live on pg_users, so the claim check is async.
+  useEffect(() => {
+    if (user && Backend.mode === 'firebase') {
+      OnlinePoints.canClaimDaily(user.uid).then(setCanClaimFb).catch(() => {});
+    }
+  }, [user]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const u = liUser.trim();
     if (!u) {
-      setLiErr('Enter your username.');
+      setLiErr(Backend.mode === 'firebase' ? 'Enter your email.' : 'Enter your username.');
+      return;
+    }
+    if (Backend.mode === 'firebase') {
+      // Online accounts are real Firebase Auth email + password.
+      const err = await NetAuth.login(u, liPw);
+      if (err) setLiErr(err);
+      else if (NetAuth.user) {
+        Sound.win();
+        onLogin(NetAuth.user);
+      }
       return;
     }
     const res = AppStore.demoLogin(u, liPw);
@@ -54,11 +75,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     const u = suUser.trim();
     if (u.length < 2) {
       setSuErr('Username needs 2+ characters.');
+      return;
+    }
+    if (Backend.mode === 'firebase') {
+      const email = suEmail.trim();
+      if (!email.includes('@')) {
+        setSuErr('Enter a valid email address.');
+        return;
+      }
+      if (suPw.length < 6) {
+        setSuErr('Password needs 6+ characters.');
+        return;
+      }
+      const err = await NetAuth.signup(email, u, suPw);
+      if (err) setSuErr(err);
+      else if (NetAuth.user) {
+        Sound.win();
+        onLogin(NetAuth.user);
+      }
       return;
     }
     const res = AppStore.demoSignup(u, suPw);
@@ -70,8 +109,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
-  const handleClaimBonus = () => {
+  const handleClaimBonus = async () => {
     if (!user) return;
+    if (Backend.mode === 'firebase') {
+      if (await OnlinePoints.claimDaily(user.uid)) {
+        Sound.win();
+        setBonusClaimedNotice(true);
+        setCanClaimFb(false);
+        onPointsUpdate();
+      }
+      return;
+    }
     if (AppStore.claimDaily(user.uid)) {
       Sound.win();
       setBonusClaimedNotice(true);
@@ -100,11 +148,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <h3 className="font-bold text-base mb-2">🔑 Log in</h3>
           <form onSubmit={handleLogin} className="space-y-2">
             <div>
-              <label className="text-xs text-[var(--muted)]">Username</label>
+              <label className="text-xs text-[var(--muted)]">
+                {Backend.mode === 'firebase' ? 'Email' : 'Username'}
+              </label>
               <input
                 value={liUser}
                 onChange={e => setLiUser(e.target.value)}
-                placeholder="Username"
+                placeholder={Backend.mode === 'firebase' ? 'you@email.com' : 'Username'}
                 className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm text-[var(--text)]"
               />
             </div>
@@ -123,17 +173,37 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Log in
             </button>
           </form>
-          <button type="button" className="btn secondary" onClick={handleDemoLogin}>
-            🎮 One-tap demo login
-          </button>
-          <div className="text-[var(--muted)] text-xs mt-2">
-            Demo account — Username: <b>demo</b> · Password: <b>demo1234</b>
-          </div>
+          {Backend.mode !== 'firebase' && (
+            <>
+              <button type="button" className="btn secondary" onClick={handleDemoLogin}>
+                🎮 One-tap demo login
+              </button>
+              <div className="text-[var(--muted)] text-xs mt-2">
+                Demo account — Username: <b>demo</b> · Password: <b>demo1234</b>
+              </div>
+            </>
+          )}
+          {Backend.mode === 'firebase' && (
+            <div className="text-[var(--muted)] text-xs mt-2">
+              Online mode — accounts live on Firebase, same login on both phones.
+            </div>
+          )}
         </div>
 
         <div className="card">
           <h3 className="font-bold text-base mb-2">✨ Sign up</h3>
           <form onSubmit={handleSignup} className="space-y-2">
+            {Backend.mode === 'firebase' && (
+              <div>
+                <label className="text-xs text-[var(--muted)]">Email</label>
+                <input
+                  value={suEmail}
+                  onChange={e => setSuEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm text-[var(--text)]"
+                />
+              </div>
+            )}
             <div>
               <label className="text-xs text-[var(--muted)]">Username</label>
               <input
@@ -168,7 +238,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     );
   }
 
-  const canClaim = AppStore.canClaimDaily(user.uid);
+  const canClaim =
+    Backend.mode === 'firebase' ? canClaimFb : AppStore.canClaimDaily(user.uid);
 
   return (
     <div className="space-y-4">

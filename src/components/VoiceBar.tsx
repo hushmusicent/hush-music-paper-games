@@ -1,44 +1,142 @@
-import React, { useState } from 'react';
-import { store } from '../utils/store';
+import React, { useState, useEffect } from 'react';
+import { User } from '../types';
+import { Backend, Voice } from '../utils/net';
 import { Sound } from '../utils/sound';
 
 interface VoiceBarProps {
-  roomName: string;
-  onJoin?: () => void;
+  roomCode?: string;
+  user?: User | null;
+  // Back-compat: older call sites passed a roomName string. The mesh keys
+  // off the room CODE, so roomName is accepted and ignored.
+  roomName?: string;
 }
 
-export const VoiceBar: React.FC<VoiceBarProps> = ({ roomName }) => {
-  const [workerUrl] = useState<string>(() => store.get('voice_worker', ''));
-  const [status, setStatus] = useState<string>(() =>
-    workerUrl
-      ? '🎤 Voice talk ready.'
-      : '🔇 Voice talk needs a token-worker URL — paste it in Profile → Setup.'
-  );
+// Real voice talk: the pure-WebRTC mesh from the hand/board recipe — no
+// LiveKit, no token worker, nothing to paste. Voice lives ONLY inside a
+// live game room, like chat. (The old bar only pretended to connect after
+// a 1-second timer; this one actually opens the mic.)
+export const VoiceBar: React.FC<VoiceBarProps> = ({ roomCode, user }) => {
+  const [, forceRender] = useState(0);
+  const [joining, setJoining] = useState(false);
 
-  const handleJoin = () => {
+  useEffect(() => {
+    const off = Voice.subscribe(() => forceRender(n => n + 1));
+    return off;
+  }, []);
+
+  // Leaving the game drops voice with it.
+  useEffect(() => {
+    return () => {
+      if (Voice.active) Voice.leave();
+    };
+  }, [roomCode]);
+
+  if (Backend.mode !== 'firebase') {
+    return (
+      <div className="voicebar">
+        <div className="flex gap-2 items-center">
+          <span className="flex-1 text-sm">
+            🔇 Voice talk unlocks with online play — connect Firebase in Profile → Setup.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roomCode) {
+    return (
+      <div className="voicebar">
+        <div className="flex gap-2 items-center">
+          <span className="flex-1 text-sm">🎤 Voice talk joins with a room.</span>
+        </div>
+      </div>
+    );
+  }
+
+  const handleJoin = async () => {
+    if (!user) return;
     Sound.click();
-    if (!workerUrl) {
-      setStatus('⚠️ No worker URL yet — paste it in Profile → Setup to enable voice talk.');
-      return;
-    }
-    setStatus('🎤 Connecting voice to ' + roomName + '…');
-    // Simulated or LiveKit connector
-    setTimeout(() => {
-      setStatus('🎤 Voice connected — you are live.');
-    }, 1000);
+    setJoining(true);
+    await Voice.join(roomCode, user.uid, user.username);
+    setJoining(false);
   };
+
+  const handleLeave = () => {
+    Sound.click();
+    Voice.leave();
+  };
+
+  const peers = Voice.peersList();
 
   return (
     <div className="voicebar">
-      <div className="flex gap-2 items-center">
-        <span className="flex-1 text-sm">{status}</span>
-        <button
-          onClick={handleJoin}
-          className="btn small bg-green-700 text-white font-bold"
-        >
-          🎤 Join Voice Talk
-        </button>
-      </div>
+      {!Voice.active ? (
+        <div className="flex gap-2 items-center">
+          <span className="flex-1 text-sm">
+            {Voice.voiceError
+              ? '⚠️ ' + Voice.voiceError
+              : '🎤 Voice talk ready — talk to your opponent in this room.'}
+          </span>
+          <button
+            onClick={handleJoin}
+            className="btn small bg-green-700 text-white font-bold"
+            disabled={joining || Voice.connecting}
+          >
+            {joining || Voice.connecting ? 'Connecting…' : '🎤 Join Voice Talk'}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex gap-2 items-center">
+            <span className="flex-1 text-sm font-bold">
+              📻 Voice Connected · {peers.length} in call
+            </span>
+            <button
+              onClick={() => {
+                Sound.click();
+                Voice.toggleMic();
+              }}
+              className="btn small"
+            >
+              {Voice.micMuted ? '🔇 Mic muted' : '🎤 Mic on'}
+            </button>
+            <button
+              onClick={() => {
+                Sound.click();
+                Voice.toggleDeafen();
+              }}
+              className="btn small secondary"
+            >
+              {Voice.speakerOff ? '🔇 Speakers off' : '🔊 Speakers on'}
+            </button>
+            <button onClick={handleLeave} className="btn small secondary">
+              Leave
+            </button>
+          </div>
+          {peers.map(p => (
+            <div key={p.uid} className="text-xs flex items-center gap-2">
+              <span
+                className={
+                  p.info.isSpeaking
+                    ? 'inline-block w-2.5 h-2.5 rounded-full bg-green-500'
+                    : 'inline-block w-2.5 h-2.5 rounded-full bg-gray-400'
+                }
+              />
+              <b>{p.info.name}</b>
+              {p.uid === user?.uid ? ' (you)' : ''}
+              {p.info.muted ? ' · 🔇 muted' : ''}
+              {p.info.isSpeaking ? ' · speaking…' : ''}
+              <span className="text-[var(--muted)]">· {p.info.mediaState}</span>
+            </div>
+          ))}
+          {Voice.sigError && (
+            <div className="text-xs err">⚠️ {Voice.sigError}</div>
+          )}
+          {Voice.voiceError && (
+            <div className="text-xs err">⚠️ {Voice.voiceError}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

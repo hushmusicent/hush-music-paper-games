@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { User, GameId } from '../types';
+import React, { useState, useEffect } from 'react';
+import { User, GameId, UserStats } from '../types';
 import { AppStore, store, DAILY_BONUS } from '../utils/store';
+import { Backend, NetAuth, OnlinePoints } from '../utils/net';
 import { GAMES_METADATA } from '../data/games';
 import { Modal } from '../components/Modal';
 import { Sound } from '../utils/sound';
@@ -18,10 +19,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onUserUpdated,
   onPointsUpdated
 }) => {
-  const points = AppStore.getPoints(user.uid);
-  const totalWins = AppStore.getTotalWins(user.uid);
-  const winsRecord = AppStore.getWins(user.uid);
-  const canClaim = AppStore.canClaimDaily(user.uid);
+  // Online points/wins live on pg_users — load them; demo stays local.
+  const online = Backend.mode === 'firebase';
+  const [fbProfile, setFbProfile] = useState<{
+    points: number;
+    wins: Record<string, UserStats>;
+    lastDaily: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (online) {
+      OnlinePoints.profile(user.uid).then(setFbProfile).catch(() => {});
+    }
+  }, [online, user.uid]);
+
+  const points = online ? fbProfile?.points ?? 0 : AppStore.getPoints(user.uid);
+  const winsRecord = online ? fbProfile?.wins ?? {} : AppStore.getWins(user.uid);
+  const totalWins = Object.values(winsRecord).reduce((s, g) => s + (g.w || 0), 0);
+  const canClaim = online
+    ? (fbProfile?.lastDaily ?? 0) !== Math.floor(Date.now() / 864e5)
+    : AppStore.canClaimDaily(user.uid);
 
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [eraseModalOpen, setEraseModalOpen] = useState(false);
@@ -30,31 +47,42 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [fbConfigText, setFbConfigText] = useState(() =>
     JSON.stringify(store.get('fb_config', ''), null, 2)
   );
-  const [voiceWorkerUrl, setVoiceWorkerUrl] = useState(() =>
-    store.get('voice_worker', '')
-  );
-  const [livekitUrl, setLivekitUrl] = useState(() =>
-    store.get('livekit_url', '')
-  );
   const [saveStatus, setSaveStatus] = useState<string>('');
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
+    if (online) {
+      if (await OnlinePoints.claimDaily(user.uid)) {
+        Sound.win();
+        OnlinePoints.profile(user.uid).then(setFbProfile).catch(() => {});
+        onPointsUpdated();
+      }
+      return;
+    }
     if (AppStore.claimDaily(user.uid)) {
       Sound.win();
       onPointsUpdated();
     }
   };
 
-  const handleRename = () => {
+  const handleRename = async () => {
     const trimmed = newUsername.trim();
     if (trimmed.length < 2) return;
-    AppStore.updateUsername(user.uid, trimmed);
-    onUserUpdated({ ...user, username: trimmed });
+    if (online) {
+      await NetAuth.updateUsername(trimmed);
+      onUserUpdated({ ...user, username: trimmed });
+    } else {
+      AppStore.updateUsername(user.uid, trimmed);
+      onUserUpdated({ ...user, username: trimmed });
+    }
     setRenameModalOpen(false);
   };
 
-  const handleErase = () => {
-    AppStore.eraseAccount(user.uid);
+  const handleErase = async () => {
+    if (online) {
+      await NetAuth.erase();
+    } else {
+      AppStore.eraseAccount(user.uid);
+    }
     setEraseModalOpen(false);
     onLogout();
   };
@@ -70,13 +98,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleSaveVoice = () => {
-    store.set('voice_worker', voiceWorkerUrl.trim());
-    store.set('livekit_url', livekitUrl.trim());
-    setSaveStatus('Voice settings saved successfully.');
-    setTimeout(() => setSaveStatus(''), 2500);
-  };
-
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-[var(--ink2)]">👤 Profile</h2>
@@ -88,7 +109,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
         <div className="text-[var(--muted)] text-xs pt-1">
           Points: <b className="text-[var(--cream)]">⭐ {points}</b> · Total
-          wins: <b>{totalWins}</b> · Mode: <b>Demo (this device)</b>
+          wins: <b>{totalWins}</b> · Mode:{' '}
+          <b>{online ? 'Online (Firebase)' : 'Demo (this device)'}</b>
         </div>
 
         {canClaim && (
@@ -186,28 +208,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </button>
         </div>
 
-        <div className="pt-2">
-          <label className="text-xs text-[var(--muted)] block">
-            LiveKit token-worker URL (voice talk)
-          </label>
-          <input
-            value={voiceWorkerUrl}
-            onChange={e => setVoiceWorkerUrl(e.target.value)}
-            placeholder="https://your-worker.your-name.workers.dev"
-            className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] mb-2"
-          />
-          <label className="text-xs text-[var(--muted)] block">
-            LiveKit server URL (if worker does not return one)
-          </label>
-          <input
-            value={livekitUrl}
-            onChange={e => setLivekitUrl(e.target.value)}
-            placeholder="wss://your-project.livekit.cloud"
-            className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--text)] mb-2"
-          />
-          <button onClick={handleSaveVoice} className="btn secondary small">
-            Save voice settings
-          </button>
+        <div className="pt-2 text-xs text-[var(--muted)] leading-relaxed">
+          🎤 Voice talk is built in — it runs phone-to-phone over the same
+          Firebase connection, like the Hand and Board hubs. No worker URL or
+          keys to paste; tap 🎤 Join Voice Talk inside a live game room.
         </div>
       </div>
 
