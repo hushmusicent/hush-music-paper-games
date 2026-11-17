@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import React, { useState, useEffect } from 'react';
 import { User, GameId } from '../types';
 import { GAMES_METADATA } from '../data/games';
