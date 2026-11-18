@@ -5,8 +5,11 @@
 // box was a dead placeholder; VoiceBar only pretended to connect). This
 // module is the missing layer, mirroring the Board hub's proven code:
 //   - Firebase compat SDK v10.12.2, lazy-loaded from gstatic (no npm dep)
-//   - Config from Profile → Setup paste (localStorage pg_fb_config) only —
-//     nothing is baked in; the app stays fully usable in demo mode offline
+//   - Config is BUILT IN (2026-11-18, owner's decision) so every phone
+//     opens already online — nobody has to paste anything. A config pasted
+//     in Profile → Setup or on the login screen still wins over the
+//     built-in one. If init fails (no network for the SDKs), the app
+//     falls back to demo mode offline
 //   - Real Firebase Auth, email + password (no anonymous sign-in)
 //   - Rooms pg_rooms/<4-digit code> with whole-state sync, host starts the
 //     game when seats fill, rejoin for players already seated
@@ -29,6 +32,19 @@ export interface FbConfig {
   messagingSenderId?: string;
   appId: string;
 }
+
+// Built-in Firebase config (owner's project — every phone opens online).
+// These are public client keys (not secrets); the database rules are what
+// protect the data. A pasted config still overrides this one.
+export const BUILT_IN_FB_CONFIG: FbConfig = {
+  apiKey: 'AIzaSyAhT_oPTtMTlUvHaSOf7zWvnUwTGyJf4sk',
+  authDomain: 'project-556676b3-bbce-4e02-8ce.firebaseapp.com',
+  databaseURL: 'https://project-556676b3-bbce-4e02-8ce-default-rtdb.firebaseio.com',
+  projectId: 'project-556676b3-bbce-4e02-8ce',
+  storageBucket: 'project-556676b3-bbce-4e02-8ce.firebasestorage.app',
+  messagingSenderId: '1043689485585',
+  appId: '1:1043689485585:web:a96258740de6856c5f88b0',
+};
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -54,7 +70,7 @@ export const Backend = {
   _initPromise: null as Promise<boolean> | null,
 
   configured(): boolean {
-    const c = store.get<any>('fb_config', null);
+    const c = store.get<any>('fb_config', null) || BUILT_IN_FB_CONFIG;
     return !!(c && c.apiKey && c.databaseURL && c.projectId);
   },
 
@@ -63,7 +79,9 @@ export const Backend = {
     this._initPromise = (async () => {
       if (!this.configured()) return false;
       try {
-        const cfg = store.get<FbConfig>('fb_config', null as unknown as FbConfig);
+        const cfg =
+          store.get<FbConfig>('fb_config', null as unknown as FbConfig) ||
+          BUILT_IN_FB_CONFIG;
         this.config = cfg;
         await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js');

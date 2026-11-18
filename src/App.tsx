@@ -43,6 +43,10 @@ export const App: React.FC = () => {
   const [simShape, setSimShape] = useState<'ring' | 'grid' | 'scatter'>('ring');
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Re-render once the online layer settles: Backend.mode is a plain
+  // property, not state, so without this the login screen would keep
+  // showing the demo UI even after init flips the mode to firebase.
+  const [, setBootTick] = useState(0);
 
   // Boot the online layer once: if Firebase keys were pasted in Profile →
   // Setup, this flips the app into online mode and restores the signed-in
@@ -72,6 +76,7 @@ export const App: React.FC = () => {
         AppStore.logout();
         setUser(null);
       }
+      setBootTick(t => t + 1);
     });
     return off;
   }, []);
