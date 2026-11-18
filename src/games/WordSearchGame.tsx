@@ -104,7 +104,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
   const [foundCells, setFoundCells] = useState<Record<string, boolean>>({});
   const [counts, setCounts] = useState<[number, number]>([0, 0]);
   const [turn, setTurn] = useState<number>(0);
-  const [sel, setSel] = useState<[number, number] | null>(null);
+  const [sel, setSel] = useState<[number, number][] | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [over, setOver] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -259,33 +259,49 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
     // other seat after every found word.)
     if (net && !isMine) return;
     setErrorMsg('');
-    if (!sel) {
-      Sound.click();
-      setSel([r, c]);
-      return;
-    }
-    const [r1, c1] = sel;
-    if (r1 === r && c1 === c) {
+    // Tapping a letter already in the selection cancels it.
+    if (sel && sel.some(([rr, cc]) => rr === r && cc === c)) {
       setSel(null);
       return;
     }
+    if (!sel) {
+      Sound.click();
+      setSel([[r, c]]);
+      return;
+    }
+    // The selection is a path. The tapped cell must lie on the same straight
+    // ray as the path so far (any straight direction from a single cell).
+    // Tap the letters of a word one by one, or tap its last letter to jump
+    // the whole line at once.
+    const [r1, c1] = sel[0];
     const dr = Math.sign(r - r1);
     const dc = Math.sign(c - c1);
     const len = Math.max(Math.abs(r - r1), Math.abs(c - c1)) + 1;
-    const straight =
-      (r === r1 || c === c1 || Math.abs(r - r1) === Math.abs(c - c1)) && len >= 3;
-    if (straight) {
-      const cells: [number, number][] = [];
-      let word = '';
-      for (let i = 0; i < len; i++) {
-        const rr = r1 + dr * i;
-        const cc = c1 + dc * i;
-        cells.push([rr, cc]);
-        word += pz.grid[rr][cc];
-      }
-      const rev = word.split('').reverse().join('');
-      const hit = [word, rev].find(w => pz.words.includes(w) && !found.includes(w));
-      if (hit) {
+    const onLine =
+      r === r1 || c === c1 || Math.abs(r - r1) === Math.abs(c - c1);
+    let dirOk = onLine;
+    if (sel.length >= 2) {
+      const pdr = Math.sign(sel[1][0] - sel[0][0]);
+      const pdc = Math.sign(sel[1][1] - sel[0][1]);
+      dirOk = onLine && dr === pdr && dc === pdc && len > sel.length;
+    }
+    if (!dirOk) {
+      // Not a continuation of this word — start fresh from the tapped cell.
+      Sound.click();
+      setSel([[r, c]]);
+      return;
+    }
+    const cells: [number, number][] = [];
+    let word = '';
+    for (let i = 0; i < len; i++) {
+      const rr = r1 + dr * i;
+      const cc = c1 + dc * i;
+      cells.push([rr, cc]);
+      word += pz.grid[rr][cc];
+    }
+    const rev = word.split('').reverse().join('');
+    const hit = [word, rev].find(w => pz.words.includes(w) && !found.includes(w));
+    if (hit) {
         Sound.win();
         const nextFound = [...found, hit];
         const nextCells = { ...foundCells };
@@ -314,7 +330,18 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
         }
         if (nextFound.length >= pz.words.length) finishPuzzle(puzzleIdx, elapsed);
         return;
-      }
+    }
+    // Not a whole word yet: keep the selection alive while the letters so
+    // far could still become a hidden word. The old code rejected anything
+    // shorter than 3 letters here, so the second tap of a word always died
+    // with "Not a hidden word".
+    const alive = pz.words.some(
+      w => !found.includes(w) && (w.startsWith(word) || w.startsWith(rev))
+    );
+    if (alive) {
+      Sound.click();
+      setSel(cells);
+      return;
     }
     Sound.beep(300, 0.08, 'square');
     setSel(null);
@@ -552,7 +579,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
             row.split('').map((char, c) => {
               const key = `${r},${c}`;
               const isFound = foundCells[key];
-              const isSelected = sel && sel[0] === r && sel[1] === c;
+              const isSelected = sel && sel.some(([rr, cc]) => rr === r && cc === c);
               return (
                 <div
                   key={key}
@@ -578,7 +605,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
           {net && !isMine && !over
             ? `⏳ ${names[cur] || 'Player ' + (cur + 1)} is hunting — ${found.length}/${pz.words.length} found.`
             : sel
-            ? 'First letter picked — now tap the LAST letter of the word.'
+            ? 'Tap the next letter of the word — or its last letter to finish it.'
             : `Tap the first letter of a hidden word. ${found.length}/${pz.words.length} found.`}
         </p>
 
