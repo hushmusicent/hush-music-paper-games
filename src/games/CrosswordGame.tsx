@@ -55,7 +55,11 @@ const saveDone = (done: Set<number>) => {
 const PROGRESS_KEY = 'pg_cw_progress_v1';
 type CwProgress = Record<
   number,
-  { cells: Record<string, string>; status: Record<string, 'ok' | 'bad'> }
+  {
+    cells: Record<string, string>;
+    status: Record<string, 'ok' | 'bad'>;
+    msg?: string;
+  }
 >;
 
 const loadProgress = (): CwProgress => {
@@ -69,17 +73,19 @@ const loadProgress = (): CwProgress => {
   }
 };
 
-const saveProgress = (
-  idx: number,
-  cells: Record<string, string>,
-  status: Record<string, 'ok' | 'bad'>
-) => {
+const saveProgress = (idx: number, patch: Partial<CwProgress[number]>) => {
   try {
     const all = loadProgress();
-    if (Object.keys(cells).length === 0 && Object.keys(status).length === 0) {
+    const cur = all[idx] ?? { cells: {}, status: {} };
+    const next = { ...cur, ...patch };
+    if (
+      Object.keys(next.cells).length === 0 &&
+      Object.keys(next.status).length === 0 &&
+      !next.msg
+    ) {
       delete all[idx];
     } else {
-      all[idx] = { cells, status };
+      all[idx] = next;
     }
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
   } catch (e) {
@@ -141,8 +147,14 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
     const saved = loadProgress()[idx];
     setCells(saved?.cells ?? {});
     setCellStatus(saved?.status ?? {});
-    setSel(null);
-    setMsg('');
+    // The clue box only renders while a word is selected, so a fresh open
+    // used to show no box at all. Always start on the first Across clue —
+    // the box is there from the moment the puzzle opens. The last Check
+    // line comes back with the draft too.
+    const p = CW_PUZZLES[idx];
+    const first = p.entries.find(e => e.dir === 'A') ?? p.entries[0];
+    setSel(first ? { r: first.r, c: first.c, dir: first.dir } : null);
+    setMsg(saved?.msg ?? '');
   };
 
   const checkCompleted = (curCells: Record<string, string>, p: CWPuzzle) => {
@@ -219,7 +231,7 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
       delete ns[key];
       setCellStatus(ns);
     }
-    saveProgress(puzzleIdx, nextCells, ns);
+    saveProgress(puzzleIdx, { cells: nextCells, status: ns });
     // selection follows the typed cell; advance along the current word
     const ce = built.cellEntry[key] || {};
     const dir: 'A' | 'D' =
@@ -261,8 +273,9 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
       }
     }
     setCellStatus(ns);
-    setMsg(`✔️ Check: ${right} right, ${wrong} wrong.`);
-    saveProgress(puzzleIdx, cells, ns);
+    const checkMsg = `✔️ Check: ${right} right, ${wrong} wrong.`;
+    setMsg(checkMsg);
+    saveProgress(puzzleIdx, { cells, status: ns, msg: checkMsg });
   };
 
   const handleReveal = () => {
