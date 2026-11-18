@@ -303,7 +303,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <h2 className="text-xl font-black text-[var(--ink2)]">
           Hush Music Paper Games
         </h2>
-        <p className="text-xs text-[var(--muted)] leading-relaxed">
+        <p className="text-xs text-[var(--text)] leading-relaxed">
           15 paper classics — Dots and Boxes, Hangman, Crosswords and more.
           Play against the computer or battle friends online.
         </p>

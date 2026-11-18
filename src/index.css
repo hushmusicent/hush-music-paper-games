@@ -455,6 +455,8 @@ table.lb tr.me td {
 }
 
 .gamecard .t {
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  /* The descriptions were dim slate on the dark card — he reads them as
+     missing. White, like the game names. */
+  color: var(--text);
 }
