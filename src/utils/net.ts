@@ -252,6 +252,7 @@ export interface RoomDoc {
   status: 'waiting' | 'playing' | 'over';
   host: string;
   created: number;
+  rematch?: Record<string, boolean>;
 }
 
 export const Net = {
@@ -374,10 +375,20 @@ export const Net = {
 
   async leave(silent: boolean): Promise<void> {
     // Silent leave (quit mid-game) keeps the room so the player can rejoin.
-    // A host leaving a waiting room removes it.
-    if (this.room && !silent && this.isHost() && this.room.status === 'waiting') {
+    // A host leaving a waiting room removes it. Leaving a finished room
+    // declines any pending rematch so the other player is not left waiting.
+    const room = this.room;
+    const uid = NetAuth.user?.uid;
+    if (room && !silent && this.isHost() && room.status === 'waiting') {
       try {
-        await Backend.db.ref('pg_rooms/' + this.room.code).remove();
+        await Backend.db.ref('pg_rooms/' + room.code).remove();
+      } catch (e) {}
+    } else if (room && room.status === 'over' && uid) {
+      try {
+        Backend.db
+          .ref('pg_rooms/' + room.code + '/rematch/' + uid)
+          .set(false)
+          .catch(() => {});
       } catch (e) {}
     }
     this.stopListen();

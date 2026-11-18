@@ -1,0 +1,30 @@
+Make "Play again" start a rematch in the SAME room after an online game ends. Paste this into the AI Studio agent chat for the Hush Music Paper Games project.
+
+---
+
+The problem: after an online PvP game ends, tapping "Play again" on the results screen quits the room and drops the player back on the "How do you want to play?" mode screen. It should start a fresh game against the same opponent, in the same room, with no new room code and no re-joining.
+
+Where it is: src/views/GameActiveView.tsx — handlePlayAgain() currently calls onQuit() when mode === 'online'. src/utils/net.ts holds the room doc (RoomDoc) and the push/listen helpers.
+
+### The rematch flow (online mode only)
+
+1. When a player taps "Play again" after an online game ends, record their wish on the room doc (for example a `rematch` map on the room with one entry per player uid). On that player's own results screen, replace the buttons with a "Waiting for the other player…" line so they know their tap registered.
+2. When BOTH players have tapped "Play again", reset the room to a fresh game: clear the game state back to the opening state, turn back to the first player, status back to 'playing', and clear the rematch wishes. Both phones must leave the results screen and show the fresh game — the phone that was still waiting must clear its finished overlay too when the room resets, not just the phone that tapped second.
+3. If the other player quits instead (taps "All games" or leaves), cancel the rematch: the waiting player goes back to the mode screen, the same as quitting does today. Do not leave them stuck on "Waiting…" forever.
+
+### Details
+
+- The rematch keeps the same game, the same room code, the same seats and names, and the same level/setup the game was started with (Dots level, Hangman level, Sprouts dots, Sim setup).
+- Points and the win/loss record from the finished game stay recorded exactly as they are today — the rematch only resets the board, not the score.
+- Vs Computer, Pass & Play, and party games: leave "Play again" exactly as it is today — it already restarts a fresh game there. Change only the online path.
+- Use the existing whole-state sync (Net.push / room state) for the reset — do not invent a second sync channel.
+
+### Do not touch
+
+- Do NOT touch the Profile page hide fix you just made in src/views/ProfileView.tsx, and do NOT touch the session-restore fix in src/App.tsx (the Backend.init() callback that only drops a stale local_ demo session when NetAuth.user is not already restored).
+- Do NOT change the login screen, the lobby, the room-code flow, or any game rules.
+
+### Verify
+
+- Compile with zero errors and confirm in the preview that after an online game ends, "Play again" shows the waiting state, and that a rematch restarts a fresh game.
+- If the GitHub push fails the same way as last time (not a git repository in /app/applet), say so plainly — the owner will push from AI Studio's GitHub integration.

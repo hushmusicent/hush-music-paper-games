@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameId, GameMode, User, FinishResult, NetGameProp } from '../types';
 import { GAMES_METADATA } from '../data/games';
 import { AppStore } from '../utils/store';
@@ -94,6 +94,10 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   const [quitModalOpen, setQuitModalOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [finished, setFinished] = useState<FinishResult | null>(null);
+  const [rematchWaiting, setRematchWaiting] = useState(false);
+  const [roundKey, setRoundKey] = useState(0);
+  const rematchResetSentRef = useRef(false);
+  const sawOverRef = useRef(false);
 
   const handleFinish = (result: FinishResult) => {
     const payout = g.payout || 50;
@@ -152,15 +156,87 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     });
   };
 
-  const handlePlayAgain = () => {
-    Sound.click();
-    // Online, a rematch is a new room — the finished room stays 'over'
-    // so the other phone is not yanked into a fresh game mid-result.
-    if (mode === 'online') {
+  // Online rematch coordination over the existing room doc:
+  // 1) Each player tapping "Play again" records rematch/<uid>: true.
+  // 2) Once all seated players want a rematch, the host resets the room doc
+  //    back to playing (state: null, turn: 0, rematch: null).
+  // 3) Both phones detect the reset from 'over' -> 'playing' and clear the
+  //    finished overlay + remount a fresh game.
+  // 4) If the other player quits instead (rematch/<uid>: false), cancel and
+  //    drop the waiting player back to the mode screen.
+  useEffect(() => {
+    if (mode !== 'online' || !room) return;
+    if (room.status === 'over') {
+      sawOverRef.current = true;
+    }
+
+    const seats = room.seats || [];
+    const otherSeats = seats.filter(uid => uid !== user.uid);
+    const rematchMap = room.rematch || {};
+
+    if (rematchWaiting && otherSeats.some(uid => rematchMap[uid] === false)) {
+      setRematchWaiting(false);
+      setFinished(null);
       onQuit();
       return;
     }
+
+    const allWantRematch =
+      seats.length >= room.seatsNeeded &&
+      seats.every(uid => rematchMap[uid] === true);
+    if (
+      room.status === 'over' &&
+      allWantRematch &&
+      room.host === user.uid &&
+      !rematchResetSentRef.current
+    ) {
+      rematchResetSentRef.current = true;
+      Net.push({
+        state: null,
+        turn: 0,
+        status: 'playing',
+        rematch: null
+      });
+      return;
+    }
+
+    const roomResetToPlay =
+      room.status === 'playing' && (!room.state || room.state.over === false);
+    if (finished && sawOverRef.current && roomResetToPlay) {
+      rematchResetSentRef.current = false;
+      sawOverRef.current = false;
+      setRematchWaiting(false);
+      setFinished(null);
+      setRoundKey(k => k + 1);
+    }
+  }, [mode, room, finished, rematchWaiting, user.uid, onQuit]);
+
+  const handlePlayAgain = () => {
+    Sound.click();
+    if (mode === 'online') {
+      if (!room) {
+        onQuit();
+        return;
+      }
+      const otherSeats = room.seats.filter(uid => uid !== user.uid);
+      if (otherSeats.some(uid => room.rematch?.[uid] === false)) {
+        onQuit();
+        return;
+      }
+      rematchResetSentRef.current = false;
+      setRematchWaiting(true);
+      Net.push({ [`rematch/${user.uid}`]: true });
+      return;
+    }
     setFinished(null);
+  };
+
+  const handleQuitFromFinished = () => {
+    Sound.click();
+    if (mode === 'online' && room) {
+      Net.push({ [`rematch/${user.uid}`]: false });
+    }
+    onQuit();
   };
 
   const renderGame = () => {
@@ -254,6 +330,14 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   if (finished) {
     const isWin = finished.result === 'w';
     const isTie = finished.result === 't';
+    const otherDeclined =
+      mode === 'online' &&
+      !!room &&
+      room.seats.some(uid => uid !== user.uid && room.rematch?.[uid] === false);
+    const otherWantsRematch =
+      mode === 'online' &&
+      !!room &&
+      room.seats.some(uid => uid !== user.uid && room.rematch?.[uid] === true);
     return (
       <div className="card text-center my-6 p-6 space-y-4">
         <div className="text-6xl animate-bounce">
@@ -288,14 +372,35 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
-          <button onClick={handlePlayAgain} className="btn flex-1">
-            Play again
-          </button>
-          <button onClick={onQuit} className="btn secondary flex-1">
-            All games
-          </button>
-        </div>
+        {mode === 'online' && rematchWaiting ? (
+          <div className="turn-banner">⏳ Waiting for the other player…</div>
+        ) : (
+          <>
+            {!otherDeclined && otherWantsRematch && (
+              <div className="msg text-xs">
+                🔄 The other player wants a rematch!
+              </div>
+            )}
+            {otherDeclined && (
+              <div className="text-xs text-[var(--muted)]">
+                The other player left the room.
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
+              {!otherDeclined && (
+                <button onClick={handlePlayAgain} className="btn flex-1">
+                  Play again
+                </button>
+              )}
+              <button
+                onClick={handleQuitFromFinished}
+                className="btn secondary flex-1"
+              >
+                All games
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -345,7 +450,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       <VoiceBar roomCode={roomCode} user={user} />
 
       {/* The Active Game */}
-      <div>{renderGame()}</div>
+      <div key={roundKey}>{renderGame()}</div>
 
       {/* In-game chat */}
       <div className="card mt-4">
