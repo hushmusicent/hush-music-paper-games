@@ -11,23 +11,29 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ user }) => {
   const [fbRows, setFbRows] = useState<BoardRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Live: the board stays attached to pg_users and re-renders whenever any
+  // player's points change — it no longer fetches once and goes stale.
   useEffect(() => {
     if (Backend.mode !== 'firebase') return;
     let alive = true;
     setLoading(true);
-    OnlineBoard.top50(user?.uid ?? null)
-      .then(rows => {
+    let unsub: () => void;
+    try {
+      unsub = OnlineBoard.watchTop50(user?.uid ?? null, rows => {
         if (!alive) return;
         setFbRows(rows);
         setLoading(false);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setFbRows([]);
-        setLoading(false);
       });
+    } catch (e) {
+      if (!alive) return;
+      setFbRows([]);
+      setLoading(false);
+    }
     return () => {
       alive = false;
+      try {
+        unsub && unsub();
+      } catch (e) {}
     };
   }, [user?.uid]);
 

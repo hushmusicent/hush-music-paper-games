@@ -603,29 +603,56 @@ export interface BoardRow {
 }
 
 export const OnlineBoard = {
+  rowsFromSnap(snap: any, myUid: string | null): BoardRow[] {
+    const rows: BoardRow[] = [];
+    snap.forEach((c: any) => {
+      const d = c.val() || {};
+      const wins = d.wins || {};
+      const totalWins = Object.values(wins).reduce(
+        (a: number, g: any) => a + (g.w || 0),
+        0
+      );
+      rows.push({
+        username: d.username || 'Player',
+        code: d.code || '',
+        points: d.points || 0,
+        wins: totalWins,
+        me: !!myUid && c.key === myUid
+      });
+    });
+    rows.sort((a, b) => b.points - a.points);
+    return rows;
+  },
+
   async top50(myUid: string | null): Promise<BoardRow[]> {
     try {
       const s = await Backend.db.ref('pg_users').orderByChild('points').limitToLast(50).get();
-      const rows: BoardRow[] = [];
-      s.forEach((c: any) => {
-        const d = c.val() || {};
-        const wins = d.wins || {};
-        const totalWins = Object.values(wins).reduce(
-          (a: number, g: any) => a + (g.w || 0),
-          0
-        );
-        rows.push({
-          username: d.username || 'Player',
-          code: d.code || '',
-          points: d.points || 0,
-          wins: totalWins,
-          me: !!myUid && c.key === myUid
-        });
-      });
-      rows.sort((a, b) => b.points - a.points);
-      return rows;
+      return this.rowsFromSnap(s, myUid);
     } catch (e) {
       return [];
+    }
+  },
+
+  // Live board: the same query stays attached, so the table re-renders
+  // whenever any player's points change — no leaving and coming back.
+  // Returns an unsubscribe for the view's effect cleanup.
+  watchTop50(myUid: string | null, cb: (rows: BoardRow[]) => void): () => void {
+    const noop = () => {};
+    try {
+      const q = Backend.db.ref('pg_users').orderByChild('points').limitToLast(50);
+      const h = (s: any) => {
+        try {
+          cb(this.rowsFromSnap(s, myUid));
+        } catch (e) {}
+      };
+      q.on('value', h);
+      return () => {
+        try {
+          q.off('value', h);
+        } catch (e) {}
+      };
+    } catch (e) {
+      return noop;
     }
   }
 };
