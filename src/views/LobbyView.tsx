@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GameId, User } from '../types';
 import { GAMES_METADATA, HEAD_TO_HEAD_GAMES } from '../data/games';
-import { AppStore, store } from '../utils/store';
-import { Backend, Net, RoomDoc } from '../utils/net';
+import { AppStore, store, START_POINTS } from '../utils/store';
+import { Backend, Net, OnlinePoints, RoomDoc, WAGER_OPTIONS } from '../utils/net';
 import { Sound } from '../utils/sound';
 
 interface LobbyViewProps {
@@ -24,8 +24,16 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [busy, setBusy] = useState(false);
   const [room, setRoom] = useState<RoomDoc | null>(() => Net.room);
   const [lastRoom] = useState<string>(() => store.get('lastroom', ''));
+  const [wager, setWager] = useState(0);
+  const [myPoints, setMyPoints] = useState(START_POINTS);
   const online = Backend.mode === 'firebase';
   const headToHead = HEAD_TO_HEAD_GAMES.includes(gameId);
+
+  // Host balance, so unaffordable wager options grey out.
+  useEffect(() => {
+    if (!online) return;
+    OnlinePoints.get(user.uid).then(setMyPoints).catch(() => {});
+  }, [online, user.uid]);
 
   // Watch the room: when seats fill (or the game already started, on a
   // rejoin) both phones move into the game together.
@@ -77,7 +85,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     Sound.click();
     setBusy(true);
     setErrorMsg('');
-    const code = await Net.create(gameId, 2);
+    const code = await Net.create(gameId, 2, wager);
     setBusy(false);
     if (!code) setErrorMsg('Could not create a room — check the connection and try again.');
     // The room watcher above moves us into the game when the guest joins.
@@ -160,6 +168,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div className="text-sm font-bold">
             {full ? 'Both players in — starting…' : '⏳ Waiting for your opponent to join…'}
           </div>
+          {(room.wager || 0) > 0 && (
+            <div className="text-sm font-bold">
+              💰 Wager: {room.wager} ⭐ — winner takes {(room.wager || 0) * 2} ⭐
+            </div>
+          )}
           {!headToHead && (
             <div className="text-xs text-[var(--muted)]">
               {g.name} plays on the host's phone in online rooms — chat and
@@ -192,6 +205,34 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               2 players — your opponent joins with the 4-digit code. The game
               starts on its own when they join.
             </p>
+            {headToHead && (
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">
+                  💰 Wager — winner takes the pot (you have {myPoints} ⭐)
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {WAGER_OPTIONS.map(w => (
+                    <button
+                      key={w}
+                      onClick={() => {
+                        Sound.click();
+                        setWager(w);
+                      }}
+                      disabled={w > 0 && myPoints < w}
+                      className={`btn small ${w === wager ? '' : 'secondary'}`}
+                    >
+                      {w === 0 ? 'Free' : w + ' ⭐'}
+                    </button>
+                  ))}
+                </div>
+                {wager > 0 && (
+                  <div className="text-xs text-[var(--muted)] mt-1">
+                    {wager} ⭐ each — winner takes {wager * 2} ⭐, tie refunds
+                    both.
+                  </div>
+                )}
+              </div>
+            )}
             <button onClick={handleCreateRoom} className="btn" disabled={busy}>
               {busy ? 'Creating…' : 'Create room'}
             </button>

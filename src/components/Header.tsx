@@ -6,6 +6,7 @@ interface HeaderProps {
   points: number;
   muted: boolean;
   onToggleSound: () => void;
+  onLogoClick?: () => void;
   voiceJoined?: boolean;
   micMuted?: boolean;
   onToggleMic?: () => void;
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   points,
   muted,
   onToggleSound,
+  onLogoClick,
   voiceJoined,
   micMuted,
   onToggleMic
@@ -22,11 +24,21 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-b from-[#14243f] to-[#0d1728] border-b-2 border-[var(--ink)] px-3 py-2 flex items-center gap-2">
       <div className="flex-1 min-w-0 flex items-center">
-        <img
-          src={LOGO_WHITE_DATA_URI}
-          alt="Hush Music Paper Games"
-          className="h-[30px] w-auto"
-        />
+        <button
+          onClick={() => {
+            Sound.click();
+            onLogoClick?.();
+          }}
+          className="cursor-pointer bg-transparent border-0 p-0 flex items-center"
+          title="Top 50 leaderboard"
+          aria-label="Go to Top 50 leaderboard"
+        >
+          <img
+            src={LOGO_WHITE_DATA_URI}
+            alt="Hush Music Paper Games"
+            className="h-[30px] w-auto"
+          />
+        </button>
       </div>
       <div className="bg-[var(--card2)] border border-[var(--ink)] text-[var(--cream)] rounded-full px-3 py-1 font-bold text-sm whitespace-nowrap">
         ⭐ {points}

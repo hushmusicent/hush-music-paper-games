@@ -164,6 +164,7 @@ export const App: React.FC = () => {
         points={points}
         muted={muted}
         onToggleSound={handleToggleSound}
+        onLogoClick={() => handleNavClick('leaderboard')}
       />
 
       <main className="max-w-[640px] mx-auto p-3">

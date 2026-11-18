@@ -253,7 +253,16 @@ export interface RoomDoc {
   host: string;
   created: number;
   rematch?: Record<string, boolean>;
+  // Points wager (online PvP only, 0 = free game). Each player pays their
+  // wager when the game starts (wagerHeld) and the winner takes the pot
+  // (2x wager) at the finish, a tie refunds both (wagerSettled).
+  wager?: number;
+  wagerHeld?: Record<string, boolean>;
+  wagerSettled?: Record<string, boolean>;
 }
+
+// Wager choices for a PvP room, in points. 0 = free game, no wager.
+export const WAGER_OPTIONS = [0, 50, 100, 250, 500];
 
 export const Net = {
   room: null as RoomDoc | null,
@@ -284,7 +293,7 @@ export const Net = {
     return !!this.room && !!NetAuth.user && this.room.host === NetAuth.user.uid;
   },
 
-  async create(game: GameId, seatsNeeded: number): Promise<string | null> {
+  async create(game: GameId, seatsNeeded: number, wager = 0): Promise<string | null> {
     if (!NetAuth.user) return null;
     const code = String(Math.floor(1000 + Math.random() * 9000));
     const room: RoomDoc = {
@@ -297,7 +306,8 @@ export const Net = {
       turn: 0,
       status: 'waiting',
       host: NetAuth.user.uid,
-      created: Date.now()
+      created: Date.now(),
+      wager
     };
     try {
       await Backend.db.ref('pg_rooms/' + code).set(room);
@@ -327,6 +337,14 @@ export const Net = {
       }
       if (room.status !== 'waiting') return { ok: false, error: 'Game already started.' };
       if (room.seats.length >= room.seatsNeeded) return { ok: false, error: 'Room is full.' };
+      // A wagered room needs the points up front — no joining on credit.
+      const wager = room.wager || 0;
+      if (wager > 0) {
+        const bal = await OnlinePoints.get(NetAuth.user.uid);
+        if (bal < wager) {
+          return { ok: false, error: 'You need ' + wager + ' ⭐ to join this wagered room.' };
+        }
+      }
       room.seats.push(NetAuth.user.uid);
       room.names[NetAuth.user.uid] = NetAuth.user.username;
       await Backend.db.ref('pg_rooms/' + c + '/seats').set(room.seats);

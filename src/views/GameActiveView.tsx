@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameId, GameMode, User, FinishResult, NetGameProp } from '../types';
 import { GAMES_METADATA } from '../data/games';
 import { AppStore } from '../utils/store';
-import { Net, OnlinePoints, RoomDoc } from '../utils/net';
+import { Backend, Net, OnlinePoints, RoomDoc } from '../utils/net';
 import { VoiceBar } from '../components/VoiceBar';
 import { ChatBox } from '../components/ChatBox';
 import { Modal } from '../components/Modal';
@@ -98,6 +98,31 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   const [roundKey, setRoundKey] = useState(0);
   const rematchResetSentRef = useRef(false);
   const sawOverRef = useRef(false);
+  // Wager outcome shown on the results card (+pot / +refund / −lost).
+  const [wagerDelta, setWagerDelta] = useState(0);
+  const wagerHoldKeyRef = useRef('');
+  const wagerSettleKeyRef = useRef('');
+
+  // Wager hold: when a wagered online game starts, each player pays their
+  // wager from their own balance, once per game. The room flag is the
+  // cross-phone guard; the key ref covers the async window before it lands.
+  useEffect(() => {
+    if (mode !== 'online' || !room) return;
+    const wager = room.wager || 0;
+    if (room.status !== 'playing' || wager <= 0) return;
+    if (room.wagerHeld?.[user.uid]) return;
+    const key = room.code + ':' + roundKey;
+    if (wagerHoldKeyRef.current === key) return;
+    wagerHoldKeyRef.current = key;
+    OnlinePoints.add(user.uid, -wager).catch(() => {});
+    Backend.db
+      .ref('pg_rooms/' + room.code + '/wagerHeld/' + user.uid)
+      .set(true)
+      .catch(() => {});
+    onPointsUpdated();
+    // onPointsUpdated is stable from App (refreshPoints).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, room, roundKey, user.uid]);
 
   const handleFinish = (result: FinishResult) => {
     const payout = g.payout || 50;
@@ -121,22 +146,45 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       earnedPts = recordRes === 'w' ? payout : 0;
     }
 
+    // Wager outcome (online PvP only): the winner takes the pot (2x wager)
+    // on top of the normal win payout, a tie refunds both wagers. The delta
+    // is folded into the single points write below — two back-to-back
+    // read-modify-write adds on the same row would race and lose one.
+    // Each phone settles only its own side, once per game (room flag +
+    // key ref), and only if it actually held its wager at the start.
+    let delta = 0;
+    const wager = mode === 'online' && room ? room.wager || 0 : 0;
+    if (wager > 0 && recordRes && room && room.wagerHeld?.[user.uid]) {
+      const sKey = room.code + ':' + roundKey;
+      if (!room.wagerSettled?.[user.uid] && wagerSettleKeyRef.current !== sKey) {
+        wagerSettleKeyRef.current = sKey;
+        delta =
+          recordRes === 'w' ? wager * 2 : recordRes === 't' ? wager : -wager;
+        setWagerDelta(delta);
+        Backend.db
+          .ref('pg_rooms/' + room.code + '/wagerSettled/' + user.uid)
+          .set(true)
+          .catch(() => {});
+      }
+    }
+
     if (recordRes === 'w') {
       earnedPts = earnedPts || payout;
-      if (mode === 'online') {
-        OnlinePoints.add(user.uid, earnedPts);
-      } else {
-        AppStore.addPoints(user.uid, earnedPts);
-      }
       Sound.win();
     } else if (recordRes === 'l') {
       Sound.lose();
     } else if (result.pts) {
       earnedPts = result.pts;
+    }
+
+    // One points write for the whole finish: win payout + wager pot/refund.
+    // (A loss pays nothing — its wager was already held at game start.)
+    const credit = earnedPts + Math.max(0, delta);
+    if (credit > 0) {
       if (mode === 'online') {
-        OnlinePoints.add(user.uid, earnedPts);
+        OnlinePoints.add(user.uid, credit);
       } else {
-        AppStore.addPoints(user.uid, earnedPts);
+        AppStore.addPoints(user.uid, credit);
       }
     }
 
@@ -195,7 +243,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         state: null,
         turn: 0,
         status: 'playing',
-        rematch: null
+        rematch: null,
+        // A rematch re-uses the same wager: clear the hold/settle flags so
+        // the next game holds and settles fresh.
+        wagerHeld: null,
+        wagerSettled: null
       });
       return;
     }
@@ -207,6 +259,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       sawOverRef.current = false;
       setRematchWaiting(false);
       setFinished(null);
+      setWagerDelta(0);
       setRoundKey(k => k + 1);
     }
   }, [mode, room, finished, rematchWaiting, user.uid, onQuit]);
@@ -229,6 +282,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       return;
     }
     setFinished(null);
+    setWagerDelta(0);
   };
 
   const handleQuitFromFinished = () => {
@@ -361,6 +415,13 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
                 +{finished.pts} ⭐ points
               </div>
             ) : null}
+            {wagerDelta !== 0 && (
+              <div className="font-bold text-base mb-1">
+                {wagerDelta > 0
+                  ? `💰 Wager +${wagerDelta} ⭐`
+                  : `💰 Wager ${wagerDelta} ⭐`}
+              </div>
+            )}
             <div className="text-[var(--muted)] text-xs">
               Result recorded:{' '}
               {finished.result === 'w'
