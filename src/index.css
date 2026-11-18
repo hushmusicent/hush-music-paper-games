@@ -383,11 +383,21 @@ body {
 
 .msg {
   background: var(--bg2);
+  /* The box paints a dark background, so it must carry light text: inside
+     PaperPanel the inherited paper-ink (#22304a) is dark-on-dark and the
+     clue + check lines are unreadable. */
+  color: var(--text);
   border-left: 3px solid var(--ink);
   padding: 8px 10px;
   border-radius: 0 10px 10px 0;
   margin: 6px 0;
   font-size: 14px;
+}
+
+/* Same fix for the dimmed spans inside a message box — the paper muted
+   (#5a6f8f) is also unreadable on the dark background. */
+.msg .muted {
+  color: var(--muted);
 }
 
 .err {
