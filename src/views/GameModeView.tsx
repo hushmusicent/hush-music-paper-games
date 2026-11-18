@@ -104,7 +104,8 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
       setStep('level');
       return;
     }
-    if (mode === 'hotseat') onSelectMode('hotseat', pmax);
+    if (mode === 'online') onOnlineLobby();
+    else if (mode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(mode);
   };
 
@@ -115,7 +116,8 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     } catch (e) {}
     if (onSimSetup) onSimSetup(simDots, simShape);
     Sound.click();
-    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    if (pendingMode === 'online') onOnlineLobby();
+    else if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
 
@@ -125,7 +127,8 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     } catch (e) {}
     if (onSproutsDots) onSproutsDots(sprDots);
     Sound.click();
-    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    if (pendingMode === 'online') onOnlineLobby();
+    else if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
 
@@ -135,7 +138,8 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     } catch (e) {}
     if (onHangLevel) onHangLevel(hangLevel);
     Sound.click();
-    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    if (pendingMode === 'online') onOnlineLobby();
+    else if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
 
@@ -145,7 +149,8 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
     } catch (e) {}
     if (onDotsLevel) onDotsLevel(level);
     Sound.click();
-    if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
+    if (pendingMode === 'online') onOnlineLobby();
+    else if (pendingMode === 'hotseat') onSelectMode('hotseat', pmax);
     else onSelectMode(pendingMode);
   };
 

@@ -172,6 +172,7 @@ export const App: React.FC = () => {
 
         {currentView === 'game_mode' && selectedGame && (
           <GameModeView
+            key={selectedGame}
             gameId={selectedGame}
             onBack={() => setCurrentView('home')}
             onSelectMode={mode => {
@@ -185,7 +186,10 @@ export const App: React.FC = () => {
               }
             }}
             onBrowseRooms={() => setCurrentView('rooms')}
-            onOnlineLobby={() => setCurrentView('lobby')}
+            onOnlineLobby={() => {
+              setCurrentView('lobby');
+              window.scrollTo(0, 0);
+            }}
             onDotsLevel={setDotsLevel}
             onHangLevel={setHangLevel}
             onSproutsDots={setSproutsDots}

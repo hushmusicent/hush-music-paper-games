@@ -1,0 +1,33 @@
+Check and fix the Online PvP lobby flow for the 4 setup games. Paste this into the AI Studio agent chat for the Hush Music Paper Games project.
+
+---
+
+Check this bug and fix it: on Dots and Boxes, Hangman, Sprouts, and Sim, tapping the 🌐 Online PvP button goes straight into the game instead of showing the online lobby. Every PvP game must go to the lobby first.
+
+What should happen (this is how Tic-Tac-Toe already works, and it works fine — do not break it):
+1. Tap a game card, then tap 🌐 Online PvP (room code).
+2. For the 4 setup games, a level/setup screen appears. Pick a level.
+3. Tap the button at the bottom ("Continue to rooms · Level X").
+4. The "🌐 Online: <game>" lobby must appear, with a "Create a room" card and a "Join a room" section.
+5. The game itself must only start AFTER a room is created or joined.
+
+What happens now: on those 4 games, after step 3 the game just starts — the lobby never shows.
+
+Facts that are already confirmed, so don't waste time on them:
+- The user is signed in ONLINE (Firebase), username MayorVeno, player code RCBMNG. This is NOT demo mode.
+- The lobby screen itself works — Tic-Tac-Toe reaches it fine.
+- The level-screen button already says "Continue to rooms · Level X".
+
+What to check:
+- Read src/views/GameModeView.tsx — the chooseMode, startDots, startHang, startSpr and startSim functions — and src/App.tsx — the onSelectMode routing. Trace exactly what happens when the level-screen button is tapped for each of the 4 games in online mode.
+- Read src/views/LobbyView.tsx — check whether anything auto-starts the game when the lobby mounts (for example a watcher on Net.room) instead of showing the Create/Join cards.
+- Compare with Tic-Tac-Toe's path, which reaches the lobby correctly, and find what is different for the 4 setup games.
+
+Rules for the fix:
+- Do not change any game's rules, levels, or gameplay.
+- Do not touch src/utils/net.ts, the Firebase config, or the voice/chat code.
+- Keep the level picker — the host must still be able to pick a level before the room is created.
+- Do not break Tic-Tac-Toe, Bulls and Cows, Word Search, or Ghost — they already reach the lobby.
+- Make all 8 head-to-head games land on the lobby first: Dots and Boxes, Tic-Tac-Toe, Hangman, Sprouts, Sim, Bulls and Cows, Word Search, Ghost.
+
+After the fix, verify in the preview: Dots and Boxes → 🌐 Online PvP → pick level 1 → tap "Continue to rooms" → the "🌐 Online: Dots and Boxes" lobby with "Create a room" must appear. Then do the same check for Hangman, Sprouts, and Sim.
