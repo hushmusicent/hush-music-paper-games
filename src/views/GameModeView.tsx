@@ -251,8 +251,15 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           </div>
 
           <button onClick={startSim} className="btn">
-            ▶ Start · {simDots} dots · {shapeLabel}
+            {pendingMode === 'online'
+              ? `▶ Continue to rooms · ${simDots} dots · ${shapeLabel}`
+              : `▶ Start · ${simDots} dots · ${shapeLabel}`}
           </button>
+          {pendingMode === 'online' && (
+            <p className="text-center mt-2 text-xs font-bold">
+              Next: create a room or join one with a code.
+            </p>
+          )}
           <p className="muted text-center mt-2 text-xs">
             Draw lines in your color — complete a triangle in YOUR color and you lose!
           </p>
@@ -331,8 +338,15 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           </div>
 
           <button onClick={startSpr} className="btn">
-            ▶ Start with {sprDots} dots
+            {pendingMode === 'online'
+              ? `▶ Continue to rooms · ${sprDots} dots`
+              : `▶ Start with ${sprDots} dots`}
           </button>
+          {pendingMode === 'online' && (
+            <p className="text-center mt-2 text-xs font-bold">
+              Next: create a room or join one with a code.
+            </p>
+          )}
           <p className="muted text-center mt-2 text-xs">
             Draw a line between two dots (or loop back to the same dot) and add a new dot on
             it. No crossing lines, max 3 lines per dot!
@@ -409,8 +423,15 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           </div>
 
           <button onClick={startHang} className="btn">
-            ▶ Start Level {hangLevel}
+            {pendingMode === 'online'
+              ? `▶ Continue to rooms · Level ${hangLevel}`
+              : `▶ Start Level ${hangLevel}`}
           </button>
+          {pendingMode === 'online' && (
+            <p className="text-center mt-2 text-xs font-bold">
+              Next: create a room or join one with a code.
+            </p>
+          )}
           <p className="muted text-center mt-2 text-xs">
             Guess the word letter by letter — 6 wrong guesses and the hangman is complete!
           </p>
@@ -500,8 +521,15 @@ export const GameModeView: React.FC<GameModeViewProps> = ({
           </div>
 
           <button onClick={startDots} className="btn">
-            ▶ Start Level {level}
+            {pendingMode === 'online'
+              ? `▶ Continue to rooms · Level ${level}`
+              : `▶ Start Level ${level}`}
           </button>
+          {pendingMode === 'online' && (
+            <p className="text-center mt-2 text-xs font-bold">
+              Next: create a room or join one with a code.
+            </p>
+          )}
           <p className="muted text-center mt-2 text-xs">
             Tap a gap between 2 dots to draw a line. Complete the fourth side of a box to claim
             it with your mark — and go again!
