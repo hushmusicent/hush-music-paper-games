@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, GameId } from '../types';
 import { GAMES_METADATA, HEAD_TO_HEAD_GAMES } from '../data/games';
-import { AppStore, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from '../utils/store';
+import { AppStore, store, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from '../utils/store';
 import { Backend, NetAuth, OnlinePoints } from '../utils/net';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
@@ -27,6 +27,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [suEmail, setSuEmail] = useState('');
   const [suPw, setSuPw] = useState('');
   const [suErr, setSuErr] = useState('');
+
+  const [fbConfigText, setFbConfigText] = useState('');
+  const [fbSaveStatus, setFbSaveStatus] = useState('');
 
   const [bonusClaimedNotice, setBonusClaimedNotice] = useState(false);
   const [canClaimFb, setCanClaimFb] = useState(false);
@@ -105,6 +108,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
     } else if (res.user) {
       Sound.win();
       onLogin(res.user);
+    }
+  };
+
+  // Connect this phone to Firebase straight from the login screen, so a
+  // logged-out phone can unlock real accounts without first logging into
+  // a demo account to reach Profile → Setup. Same save as ProfileView.
+  const handleSaveFirebase = () => {
+    try {
+      const parsed = JSON.parse(fbConfigText);
+      store.set('fb_config', parsed);
+      setFbSaveStatus('Firebase config saved! Reloading…');
+      setTimeout(() => window.location.reload(), 600);
+    } catch (e) {
+      setFbSaveStatus('Error: Invalid JSON format.');
     }
   };
 
@@ -228,11 +245,40 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Create account (+{START_POINTS} ⭐)
             </button>
             <div className="text-[var(--muted)] text-xs mt-2">
-              Demo mode: accounts live on this device. Connect Firebase in Profile
-              → Setup for real logins, friends &amp; online play.
+              Demo mode: accounts live on this device. Paste your Firebase
+              config in the box below for real logins, friends &amp; online play.
             </div>
           </form>
         </div>
+
+        {Backend.mode !== 'firebase' && (
+          <div className="card space-y-2">
+            <h3 className="font-bold text-base">🌐 Connect Firebase — unlock online play</h3>
+            <div className="text-xs text-[var(--muted)] leading-relaxed">
+              Paste your free Firebase web config JSON to unlock real accounts,
+              friends, online PvP, and shared Top 50 on this phone. The sign-up
+              box above will show an Email field once it&apos;s connected.
+            </div>
+            {fbSaveStatus && (
+              <div className="msg text-xs font-semibold">{fbSaveStatus}</div>
+            )}
+            <div>
+              <label className="text-xs text-[var(--muted)]">
+                Firebase config (JSON)
+              </label>
+              <textarea
+                rows={4}
+                value={fbConfigText}
+                onChange={e => setFbConfigText(e.target.value)}
+                placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"…","projectId":"…","appId":"…"}'
+                className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl p-2 text-xs font-mono text-[var(--text)]"
+              />
+              <button onClick={handleSaveFirebase} className="btn small">
+                Save Firebase keys
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

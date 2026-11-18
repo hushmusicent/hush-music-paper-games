@@ -62,6 +62,16 @@ export const App: React.FC = () => {
     });
     Backend.init().then(ok => {
       if (ok && NetAuth.user) setUser(NetAuth.user);
+      // A demo/local session (uid 'local_…') means nothing in online mode:
+      // drop it so the login screen — with the Email sign-up — shows
+      // instead of a demo account stuck with no Firebase user behind it.
+      // Real Firebase uids never start with 'local_', so real accounts
+      // are untouched, and a restoring Firebase user still arrives
+      // through the onAuthStateChanged listener above.
+      if (ok && user && user.uid.startsWith('local_')) {
+        AppStore.logout();
+        setUser(null);
+      }
     });
     return off;
   }, []);
