@@ -46,6 +46,57 @@ const saveDone = (done: Set<number>) => {
   }
 };
 
+// In-progress drafts, per puzzle: the letters typed so far + the Check
+// marks. Leaving an unfinished puzzle used to wipe the board (startPuzzle
+// reset cells to {}), so a word he had completed vanished on return while
+// nothing marked it. The draft lives in localStorage like the done set,
+// and is cleared when the puzzle is finished or the answers are revealed
+// (a revealed board must never come back as if he had solved it).
+const PROGRESS_KEY = 'pg_cw_progress_v1';
+type CwProgress = Record<
+  number,
+  { cells: Record<string, string>; status: Record<string, 'ok' | 'bad'> }
+>;
+
+const loadProgress = (): CwProgress => {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const saveProgress = (
+  idx: number,
+  cells: Record<string, string>,
+  status: Record<string, 'ok' | 'bad'>
+) => {
+  try {
+    const all = loadProgress();
+    if (Object.keys(cells).length === 0 && Object.keys(status).length === 0) {
+      delete all[idx];
+    } else {
+      all[idx] = { cells, status };
+    }
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+  } catch (e) {
+    /* ignore */
+  }
+};
+
+const clearProgress = (idx: number) => {
+  try {
+    const all = loadProgress();
+    delete all[idx];
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+  } catch (e) {
+    /* ignore */
+  }
+};
+
 interface BuiltPuzzle {
   size: number;
   nums: Record<string, number>;
@@ -84,8 +135,12 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
   const startPuzzle = (idx: number) => {
     Sound.click();
     setPuzzleIdx(idx);
-    setCells({});
-    setCellStatus({});
+    // Pick up where he left off: an unfinished puzzle keeps its letters (and
+    // check marks) on this device. A finished puzzle starts empty — its
+    // draft was cleared when it was completed.
+    const saved = loadProgress()[idx];
+    setCells(saved?.cells ?? {});
+    setCellStatus(saved?.status ?? {});
     setSel(null);
     setMsg('');
   };
@@ -102,6 +157,7 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
   };
 
   const finishPuzzle = (idx: number) => {
+    clearProgress(idx);
     const next = new Set(done);
     next.add(idx);
     setDone(next);
@@ -153,13 +209,17 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
     if (!pz || !built) return;
     const char = val.toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
     const key = `${r},${c}`;
-    const nextCells = { ...cells, [key]: char };
+    const nextCells = { ...cells };
+    if (char) nextCells[key] = char;
+    else delete nextCells[key];
     setCells(nextCells);
+    let ns = cellStatus;
     if (cellStatus[key]) {
-      const ns = { ...cellStatus };
+      ns = { ...cellStatus };
       delete ns[key];
       setCellStatus(ns);
     }
+    saveProgress(puzzleIdx, nextCells, ns);
     // selection follows the typed cell; advance along the current word
     const ce = built.cellEntry[key] || {};
     const dir: 'A' | 'D' =
@@ -202,11 +262,14 @@ export const CrosswordGame: React.FC<CrosswordGameProps> = ({ onFinish }) => {
     }
     setCellStatus(ns);
     setMsg(`✔️ Check: ${right} right, ${wrong} wrong.`);
+    saveProgress(puzzleIdx, cells, ns);
   };
 
   const handleReveal = () => {
     if (!pz) return;
     Sound.click();
+    // The revealed solution is not his work — don't save it as progress.
+    clearProgress(puzzleIdx);
     const full: Record<string, string> = {};
     for (const e of pz.entries) {
       const dr = e.dir === 'D' ? 1 : 0;
