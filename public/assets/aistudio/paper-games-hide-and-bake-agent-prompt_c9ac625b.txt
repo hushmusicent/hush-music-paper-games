@@ -1,0 +1,33 @@
+Hide the Firebase config on the Profile page, and confirm the Firebase config is baked into the app. Paste this into the AI Studio agent chat for the Hush Music Paper Games project.
+
+---
+
+Two jobs, in this order:
+
+### 1. Bake the Firebase config into the app — CHECK FIRST, do not duplicate it
+
+The config is ALREADY baked in: open src/utils/net.ts and look for BUILT_IN_FB_CONFIG. It should already hold the real project config, and Backend.init() should already fall back to it when no pasted config is stored.
+
+- If BUILT_IN_FB_CONFIG is there with real values and the fallback is wired, LEAVE net.ts ALONE. Do not add a second copy, do not change the values.
+- Only if the built-in config is missing or still placeholder values should you add it — take the real config from the Profile → Setup box in the preview (it shows the saved config) and put it in BUILT_IN_FB_CONFIG in net.ts, with the fallback in Backend.configured() and Backend.init().
+
+### 2. Hide the Firebase config box on the Profile page (the main job)
+
+On the Profile page, the "Setup — unlock online play" box still shows the full Firebase config (apiKey and everything) in a text box, even though Firebase is already connected. Hide it when connected.
+
+- The Profile page already has `const online = Backend.mode === 'firebase';` in src/views/ProfileView.tsx. Use it.
+- When `online` is true: HIDE the whole "Setup — unlock online play" card — the textarea with the config and the "Save Firebase keys" button must not show at all. In its place show one small line, for example "✅ Firebase connected — online play is on." Do not show any key values.
+- When `online` is false (demo mode, no config saved yet): keep the Setup box exactly as it is, so a logged-in demo user can still paste the config there.
+
+### Do not touch
+
+- Do NOT delete or change the stored config — only hide how it is displayed. The app must stay online after this change.
+- Do NOT touch the "Connect Firebase — unlock online play" box on the login screen (HomeView) — that stays as it is.
+- Do NOT touch the login/sign-up forms, the lobby routing, or any game logic.
+- Do NOT regress the session-restore fix you just made in src/App.tsx (the Backend.init() callback that only drops a stale local_ demo session when NetAuth.user is not already restored). Leave App.tsx exactly as it is.
+- Do NOT change anything else on the Profile page (username, player code, points, daily bonus, change username, erase account, log out all stay as they are).
+
+### Verify and push
+
+- Compile the app with zero errors and confirm in the preview that the Profile page shows the connected line with no config text box visible.
+- Then push all your changes to GitHub (main branch) so they are not lost — including the App.tsx session-restore fix and this Profile change.

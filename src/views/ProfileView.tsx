@@ -185,40 +185,46 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      <div className="card space-y-2">
-        <h3 className="font-bold text-base">⚙️ Setup — unlock online play</h3>
-        <div className="text-xs text-[var(--muted)] leading-relaxed">
-          Demo mode works fully offline. Paste your free Firebase web config
-          JSON to unlock online PvP, friends, shared Top 50, and persistent
-          storage.
+      {online ? (
+        <div className="card">
+          <div className="ok text-sm">✅ Firebase connected — online play is on.</div>
         </div>
+      ) : (
+        <div className="card space-y-2">
+          <h3 className="font-bold text-base">⚙️ Setup — unlock online play</h3>
+          <div className="text-xs text-[var(--muted)] leading-relaxed">
+            Demo mode works fully offline. Paste your free Firebase web config
+            JSON to unlock online PvP, friends, shared Top 50, and persistent
+            storage.
+          </div>
 
-        {saveStatus && (
-          <div className="msg text-xs font-semibold">{saveStatus}</div>
-        )}
+          {saveStatus && (
+            <div className="msg text-xs font-semibold">{saveStatus}</div>
+          )}
 
-        <div>
-          <label className="text-xs text-[var(--muted)]">
-            Firebase config (JSON)
-          </label>
-          <textarea
-            rows={4}
-            value={fbConfigText}
-            onChange={e => setFbConfigText(e.target.value)}
-            placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"…","projectId":"…","appId":"…"}'
-            className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl p-2 text-xs font-mono text-[var(--text)]"
-          />
-          <button onClick={handleSaveFirebase} className="btn small">
-            Save Firebase keys
-          </button>
+          <div>
+            <label className="text-xs text-[var(--muted)]">
+              Firebase config (JSON)
+            </label>
+            <textarea
+              rows={4}
+              value={fbConfigText}
+              onChange={e => setFbConfigText(e.target.value)}
+              placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"…","projectId":"…","appId":"…"}'
+              className="w-full bg-[var(--bg2)] border border-[var(--line)] rounded-xl p-2 text-xs font-mono text-[var(--text)]"
+            />
+            <button onClick={handleSaveFirebase} className="btn small">
+              Save Firebase keys
+            </button>
+          </div>
+
+          <div className="pt-2 text-xs text-[var(--muted)] leading-relaxed">
+            🎤 Voice talk is built in — it runs phone-to-phone over the same
+            Firebase connection, like the Hand and Board hubs. No worker URL or
+            keys to paste; tap 🎤 Join Voice Talk inside a live game room.
+          </div>
         </div>
-
-        <div className="pt-2 text-xs text-[var(--muted)] leading-relaxed">
-          🎤 Voice talk is built in — it runs phone-to-phone over the same
-          Firebase connection, like the Hand and Board hubs. No worker URL or
-          keys to paste; tap 🎤 Join Voice Talk inside a live game room.
-        </div>
-      </div>
+      )}
 
       {/* Change username modal */}
       <Modal isOpen={renameModalOpen}>
