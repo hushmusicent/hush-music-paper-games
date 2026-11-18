@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameId, GameMode, User, FinishResult, NetGameProp } from '../types';
 import { GAMES_METADATA } from '../data/games';
-import { AppStore } from '../utils/store';
+import { AppStore, PVP_WIN_POINTS } from '../utils/store';
 import { Backend, Net, OnlinePoints, RoomDoc } from '../utils/net';
 import { VoiceBar } from '../components/VoiceBar';
 import { ChatBox } from '../components/ChatBox';
@@ -141,9 +141,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     }
     // Online, the winner is a SEAT, not "player 1": a guest win is a win
     // on the guest's phone too. (Games report winner as a seat index.)
+    // A PvP win pays the flat 200 (same as Show Games), not the small
+    // vs-computer payout — the wager pot lands on top of it.
     if (mode === 'online' && result.winner >= 0) {
       recordRes = result.winner === mySeat ? 'w' : 'l';
-      earnedPts = recordRes === 'w' ? payout : 0;
+      earnedPts = recordRes === 'w' ? PVP_WIN_POINTS : 0;
     }
 
     // Wager outcome (online PvP only): the winner takes the pot (2x wager)

@@ -3,6 +3,9 @@ import { BOT_NAMES, botCode } from '../data/words';
 
 export const START_POINTS = 1000;
 export const DAILY_BONUS = 500;
+// A PvP win pays a flat 200 points (same as Show Games) — on top of any
+// wager pot. Vs-Computer wins keep the per-game payout below.
+export const PVP_WIN_POINTS = 200;
 export const DEMO_USER = 'demo';
 export const DEMO_PASS = 'demo1234';
 

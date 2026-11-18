@@ -204,6 +204,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <p className="text-xs text-[var(--muted)]">
               2 players — your opponent joins with the 4-digit code. The game
               starts on its own when they join.
+              {headToHead && (
+                <>
+                  {' '}Winning earns <b>200 ⭐</b>
+                  {wager > 0 ? ' + the wager pot' : ''}.
+                </>
+              )}
             </p>
             {headToHead && (
               <div>
