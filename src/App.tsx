@@ -87,7 +87,14 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      setPoints(AppStore.getPoints(user.uid));
+      // Same rule as the win payout: the total lives online when signed in
+      // online, locally in demo mode. Reading the local store here would
+      // flash the header to the demo fallback (1000) on an online account.
+      if (Backend.mode === 'firebase') {
+        OnlinePoints.get(user.uid).then(setPoints).catch(() => {});
+      } else {
+        setPoints(AppStore.getPoints(user.uid));
+      }
     }
   }, [user]);
 

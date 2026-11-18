@@ -181,9 +181,15 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
     // One points write for the whole finish: win payout + wager pot/refund.
     // (A loss pays nothing — its wager was already held at game start.)
+    // NOTE: the store is picked by the ACCOUNT mode (Backend.mode), not the
+    // game mode — a vs-computer win while signed in online must land on the
+    // online total. The old code branched on the game mode, so PvC wins in
+    // online mode went to AppStore.addPoints, which silently drops points
+    // for a Firebase uid with no local account (and the record with it).
     const credit = earnedPts + Math.max(0, delta);
+    const onlineAccount = Backend.mode === 'firebase';
     if (credit > 0) {
-      if (mode === 'online') {
+      if (onlineAccount) {
         OnlinePoints.add(user.uid, credit);
       } else {
         AppStore.addPoints(user.uid, credit);
@@ -191,7 +197,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     }
 
     if (recordRes && mode !== 'hotseat') {
-      if (mode === 'online') {
+      if (onlineAccount) {
         OnlinePoints.record(user.uid, gameId, recordRes);
       } else {
         AppStore.recordResult(user.uid, gameId, recordRes);
