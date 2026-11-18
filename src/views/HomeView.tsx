@@ -5,6 +5,7 @@ import { AppStore, store, START_POINTS, DAILY_BONUS, DEMO_USER, DEMO_PASS } from
 import { Backend, NetAuth, OnlinePoints } from '../utils/net';
 import { PaperPanel } from '../components/PaperPanel';
 import { Sound } from '../utils/sound';
+import { LOGO_WHITE_DATA_URI } from '../data/logoWhite';
 
 interface HomeViewProps {
   user: User | null;
@@ -288,9 +289,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-black text-[var(--ink2)] mb-2">
-        ✏️ Hush Music Paper Games
-      </h2>
+      {/* Hero showcase card, like the Hand Game hub: logo, studio line,
+          title, tagline. */}
+      <div className="card space-y-2">
+        <img
+          src={LOGO_WHITE_DATA_URI}
+          alt="Hush Music Games"
+          className="h-14 w-auto"
+        />
+        <div className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+          Hush Music Entertainment
+        </div>
+        <h2 className="text-xl font-black text-[var(--ink2)]">
+          Hush Music Paper Games
+        </h2>
+        <p className="text-xs text-[var(--muted)] leading-relaxed">
+          15 paper classics — Dots and Boxes, Hangman, Crosswords and more.
+          Play against the computer or battle friends online.
+        </p>
+      </div>
 
       <div className="card">
         <div className="flex items-center justify-between mb-3">
