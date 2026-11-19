@@ -352,6 +352,49 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, room, finished, roundKey, user.uid, user.username, mySeat, gameId, names]);
 
+  // A forfeit-ended room has status 'over' but the game state is NOT
+  // over (the game was mid-play when the quitter left) — so a client
+  // mounting fresh (a rejoin, or a reload) never gets onFinish from the
+  // game and would land on a playable board instead of the results
+  // screen. That would strand a forfeiter who rejoined to tap Play
+  // Again. Derive the finished overlay from the room doc instead: the
+  // winner is the player with winSettled set. Only a forfeit settle
+  // leaves a room 'over' with the state not over (a normal win pushes
+  // an over-state with the status), so this cannot fire for a normal
+  // finish — and it keys on winSettled, not the forfeit flag, so it
+  // still works after a rejoin cleared the flag. Display only — no
+  // points or records are written here (the win was already settled
+  // when the forfeit fired).
+  useEffect(() => {
+    if (mode !== 'online' || !room || finished) return;
+    if (room.status !== 'over' || room.state?.over) return;
+    const winnerUid = Object.keys(room.winSettled || {}).find(uid =>
+      (room.seats || []).includes(uid)
+    );
+    if (!winnerUid) return;
+    const winnerSeat = (room.seats || []).indexOf(winnerUid);
+    if (winnerSeat < 0) return;
+    // In a forfeit-ended game every non-winner quit (that is how the
+    // settle fired), so the other seats are the quitters.
+    const quitterNames = (room.seats || [])
+      .filter(uid => uid !== winnerUid)
+      .map(uid => names[(room.seats || []).indexOf(uid)] || 'Opponent');
+    setFinished({
+      winner: winnerSeat,
+      pts: 0,
+      result: winnerSeat === mySeat ? 'w' : 'l',
+      title: `${names[winnerSeat] || 'Opponent'} wins!`,
+      body: (
+        <div className="msg">
+          {winnerSeat === mySeat
+            ? `${quitterNames.join(' & ')} quit mid-game — you win by forfeit!`
+            : `You quit mid-game — ${names[winnerSeat] || 'your opponent'} wins by forfeit.`}
+        </div>
+      )
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, room, finished, mySeat, names]);
+
   // Turn-skip for a forfeited seat (3-4 player rooms): turns cycle in seat
   // order, so a quitter's turn would stall the game forever — nobody can
   // move for their seat. When the room's current turn belongs to a
@@ -386,12 +429,20 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
   // Online rematch coordination over the existing room doc:
   // 1) Each player tapping "Play again" records rematch/<uid>: true.
-  // 2) Once all seated players want a rematch, the host resets the room doc
-  //    back to playing (state: null, turn: 0, rematch: null).
+  // 2) Once all players still seated want a rematch, one designated
+  //    player resets the room doc back to playing (state: null, turn: 0,
+  //    rematch: null).
   // 3) Both phones detect the reset from 'over' -> 'playing' and clear the
   //    finished overlay + remount a fresh game.
   // 4) If the other player quits instead (rematch/<uid>: false), cancel and
   //    drop the waiting player back to the mode screen.
+  // A forfeit is NOT a decline: a player who quit mid-game is out of the
+  // rematch count, and their seat is dropped from the new game (the
+  // remaining players rematch short-handed). If they rejoin by code
+  // before the rematch starts, Net.join clears their forfeit flag and
+  // they count as seated again — and must tap Play Again too. The
+  // reset sender is the lowest live seat (not the host), so a rematch
+  // still starts when the host was the quitter.
   useEffect(() => {
     if (mode !== 'online' || !room) return;
     if (room.status === 'over') {
@@ -401,6 +452,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     const seats = room.seats || [];
     const otherSeats = seats.filter(uid => uid !== user.uid);
     const rematchMap = room.rematch || {};
+    // Seats still in the game: forfeited seats are out unless their
+    // player rejoined (join clears the flag). At least 2 live seats are
+    // needed to start a game — with fewer, the waiters hold until the
+    // quitter comes back (or cancels).
+    const liveSeats = seats.filter(uid => !room.forfeit?.[uid]);
 
     if (rematchWaiting && otherSeats.some(uid => rematchMap[uid] === false)) {
       setRematchWaiting(false);
@@ -410,20 +466,33 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     }
 
     const allWantRematch =
-      seats.length >= room.seatsNeeded &&
-      seats.every(uid => rematchMap[uid] === true);
+      liveSeats.length >= 2 &&
+      liveSeats.every(uid => rematchMap[uid] === true);
+    const lowestLiveSeat = liveSeats.length
+      ? Math.min(...liveSeats.map(uid => seats.indexOf(uid)))
+      : -1;
     if (
       room.status === 'over' &&
       allWantRematch &&
-      room.host === user.uid &&
+      mySeat === lowestLiveSeat &&
       !rematchResetSentRef.current
     ) {
       rematchResetSentRef.current = true;
+      const droppedSeats = seats.filter(uid => room.forfeit?.[uid]);
       Net.push({
         state: null,
         turn: 0,
         status: 'playing',
         rematch: null,
+        // The forfeited seats leave the room: the new game runs with the
+        // players still seated, short-handed. Their names go with them,
+        // and the new host is the player sending this reset.
+        seats: liveSeats,
+        seatsNeeded: liveSeats.length,
+        host: user.uid,
+        ...Object.fromEntries(
+          droppedSeats.map(uid => ['names/' + uid, null])
+        ),
         // A rematch re-uses the same wager: clear the hold/settle flags so
         // the next game holds and settles fresh.
         wagerHeld: null,
@@ -447,7 +516,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       setWagerDelta(0);
       setRoundKey(k => k + 1);
     }
-  }, [mode, room, finished, rematchWaiting, user.uid, onQuit]);
+  }, [mode, room, finished, rematchWaiting, user.uid, mySeat, onQuit]);
 
   const handlePlayAgain = () => {
     Sound.click();
@@ -569,18 +638,45 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   if (finished) {
     const isWin = finished.result === 'w';
     const isTie = finished.result === 't';
+    // A forfeit is not a decline: the quitter left mid-game, but the
+    // players still in the room can rematch without them. Only an
+    // explicit rematch/<uid>: false (quit from the results screen)
+    // hides Play Again.
     const otherDeclined =
       mode === 'online' &&
       !!room &&
       room.seats.some(
-        uid =>
-          uid !== user.uid &&
-          (room.rematch?.[uid] === false || room.forfeit?.[uid] === true)
+        uid => uid !== user.uid && room.rematch?.[uid] === false
       );
     const otherWantsRematch =
       mode === 'online' &&
       !!room &&
       room.seats.some(uid => uid !== user.uid && room.rematch?.[uid] === true);
+    // Rematch waiting: forfeited seats don't count as pending (they left
+    // the room); if every live player has tapped but the room is
+    // short-handed, we are waiting on a quitter to rejoin, not on a tap.
+    const forfeitedSeats =
+      mode === 'online' && room
+        ? room.seats.filter(uid => room.forfeit?.[uid])
+        : [];
+    const liveSeatCount =
+      mode === 'online' && room
+        ? room.seats.filter(uid => !room.forfeit?.[uid]).length
+        : 0;
+    const pendingLive =
+      mode === 'online' && room
+        ? room.seats.filter(
+            uid =>
+              uid !== user.uid &&
+              !room.forfeit?.[uid] &&
+              room.rematch?.[uid] !== true
+          ).length
+        : 0;
+    const waitingOnRejoin =
+      rematchWaiting &&
+      pendingLive === 0 &&
+      forfeitedSeats.length > 0 &&
+      liveSeatCount < 2;
     return (
       <div className="card text-center my-6 p-6 space-y-4">
         <div className="text-6xl animate-bounce">
@@ -630,15 +726,14 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
         {mode === 'online' && rematchWaiting ? (
           <div className="turn-banner">
-            {room && room.seatsNeeded > 2
-              ? (() => {
-                  const pending = room.seats.filter(
-                    uid => uid !== user.uid && room.rematch?.[uid] !== true
-                  ).length;
-                  return pending === 0
-                    ? '⏳ Waiting for the other players…'
-                    : `⏳ Waiting for ${pending} more player${pending === 1 ? '' : 's'}…`;
-                })()
+            {waitingOnRejoin
+              ? `⏳ Waiting for ${forfeitedSeats
+                  .map(uid => room?.names[uid] || 'the other player')
+                  .join(' & ')} to rejoin…`
+              : room && room.seatsNeeded > 2
+              ? pendingLive === 0
+                ? '⏳ Waiting for the other players…'
+                : `⏳ Waiting for ${pendingLive} more player${pendingLive === 1 ? '' : 's'}…`
               : '⏳ Waiting for the other player…'}
           </div>
         ) : (

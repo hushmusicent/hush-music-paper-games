@@ -371,7 +371,19 @@ export const Net = {
       const room = snap.val() as RoomDoc;
       const alreadySeated = room.seats.includes(NetAuth.user.uid);
       if (alreadySeated) {
-        // Rejoin: a started game lets its own players back in.
+        // Rejoin: a started game lets its own players back in. A
+        // forfeiter who comes back to a finished room counts as seated
+        // again — clear the forfeit flag so the rematch logic waits for
+        // their Play Again instead of dropping their seat. Only for a
+        // finished room: mid-game the flag stays, so a quitter who pops
+        // back in mid-game does not rejoin the rotation (their wager is
+        // already settled as a loss).
+        if (room.status === 'over' && room.forfeit?.[NetAuth.user.uid]) {
+          await Backend.db
+            .ref('pg_rooms/' + c)
+            .update({ ['forfeit/' + NetAuth.user.uid]: null })
+            .catch(() => {});
+        }
         store.set('lastroom', c);
         this.listen(c);
         return { ok: true, rejoined: room.status !== 'waiting' };
