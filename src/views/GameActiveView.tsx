@@ -429,7 +429,10 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         wagerHeld: null,
         wagerSettled: null,
         // ... and the win-settle flag, so the new game's winner can pay.
-        winSettled: null
+        winSettled: null,
+        // ... and the forfeit flag, so a forfeiter from the last game
+        // cannot end the new game before it starts.
+        forfeit: null
       });
       return;
     }
