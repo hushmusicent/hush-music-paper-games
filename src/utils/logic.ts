@@ -35,7 +35,7 @@ export const Logic = {
     const [w, h] = this.DOTS_LEVELS[L - 1];
     return { w, h, dots: (w + 1) * (h + 1), boxes: w * h };
   },
-  dotsNew(cols: number, rows: number) {
+  dotsNew(cols: number, rows: number, players = 2) {
     return {
       cols,
       rows,
@@ -44,7 +44,7 @@ export const Logic = {
       boxes: Array(cols * rows).fill(0),
       turn: 0,
       over: false,
-      scores: [0, 0] as [number, number]
+      scores: Array(Math.max(2, players)).fill(0) as number[]
     };
   },
   dotsEdgeIdx(kind: 'h' | 'v', r: number, c: number, S: any) {
@@ -620,9 +620,10 @@ export function sproutsApply(
   S: any,
   a: number,
   b: number,
-  mid: { x: number; y: number }
+  mid: { x: number; y: number },
+  players = 2
 ) {
-  S.edges.push({ a, b, mx: mid.x, my: mid.y, by: S.turn % 2 });
+  S.edges.push({ a, b, mx: mid.x, my: mid.y, by: S.turn % Math.max(2, players) });
   S.dots.push({ x: mid.x, y: mid.y, deg: 2 });
   if (a === b) S.dots[a].deg += 2;
   else {

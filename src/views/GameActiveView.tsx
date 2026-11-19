@@ -154,6 +154,28 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       earnedPts = recordRes === 'w' ? PVP_WIN_POINTS : 0;
     }
 
+    // Tied for first (3-4 player games report `tied`, the seats sharing the
+    // top score; a winner of -1 with no `tied` list is a full tie — every
+    // seat). A tied player records a tie, gets the 100 ⭐ tie credit
+    // (the 2-player tie rule is 100/100 + wager refund), and shares the
+    // pot — see the wager block below.
+    const seatCount = mode === 'online' && room ? room.seats.length : names.length;
+    const tiedSeats: number[] =
+      result.tied && result.tied.length
+        ? result.tied
+        : result.winner === -1 || result.result === 't'
+        ? names.map((_, i) => i)
+        : [];
+    const iAmTied = mode === 'online' && result.winner === -1 && tiedSeats.includes(mySeat);
+    if (mode === 'online' && result.winner === -1) {
+      // A draw with a `tied` list is a PARTIAL tie: only the tied seats
+      // record a tie and share the pot. The other seats LOST — the old
+      // code recorded 't' (and refunded the wager) for everyone whenever
+      // winner was -1, which would have paid the outright loser a pot share.
+      recordRes = iAmTied ? 't' : 'l';
+      earnedPts = iAmTied ? 100 : 0;
+    }
+
     // Room-level win-settle flag (online PvP only): the 200 ⭐ win + win
     // record pay once per game per player, across mounts. The per-mount
     // finishLockKeyRef above cannot cover a rejoin (fresh mount), and
@@ -161,8 +183,10 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     // over-state — so without this, rejoining a finished room as the
     // winner would farm +200 ⭐ and +1 win on every rejoin. Mirrors the
     // wagerSettled pattern below: the room flag is the cross-mount guard.
+    // The same flag also covers the 100 ⭐ tie credit: a tied player who
+    // rejoins a finished room must not be paid the tie credit again.
     let winAlreadySettled = false;
-    if (mode === 'online' && room && recordRes === 'w') {
+    if (mode === 'online' && room && (recordRes === 'w' || recordRes === 't')) {
       winAlreadySettled = !!room.winSettled?.[user.uid];
       if (!winAlreadySettled) {
         Backend.db
@@ -172,20 +196,34 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       }
     }
 
-    // Wager outcome (online PvP only): the winner takes the pot (2x wager)
-    // on top of the normal win payout, a tie refunds both wagers. The delta
-    // is folded into the single points write below — two back-to-back
-    // read-modify-write adds on the same row would race and lose one.
-    // Each phone settles only its own side, once per game (room flag +
-    // key ref), and only if it actually held its wager at the start.
+    // Wager outcome (online PvP only): the pot is N x wager — every seated
+    // player held their own wager at the start, so a 3-player 100 ⭐ room
+    // holds a 300 ⭐ pot and a 4-player one 400 ⭐. The winner takes the
+    // whole pot on top of the normal win payout; a full tie refunds every
+    // wager; a partial tie (some seats tied for first) splits the pot
+    // equally among the tied seats (Math.floor — a remainder of 1-2 ⭐
+    // from an uneven split stays unclaimed). The delta is folded into the
+    // single points write below — two back-to-back read-modify-write adds
+    // on the same row would race and lose one. Each phone settles only
+    // its own side, once per game (room flag + key ref), and only if it
+    // actually held its wager at the start.
     let delta = 0;
     const wager = mode === 'online' && room ? room.wager || 0 : 0;
     if (wager > 0 && recordRes && room && room.wagerHeld?.[user.uid]) {
       const sKey = room.code + ':' + roundKey;
       if (!room.wagerSettled?.[user.uid] && wagerSettleKeyRef.current !== sKey) {
         wagerSettleKeyRef.current = sKey;
-        delta =
-          recordRes === 'w' ? wager * 2 : recordRes === 't' ? wager : -wager;
+        const pot = wager * seatCount;
+        if (recordRes === 'w') {
+          delta = pot;
+        } else if (recordRes === 't') {
+          delta =
+            tiedSeats.length >= seatCount
+              ? wager // full tie: refund
+              : Math.floor(pot / Math.max(1, tiedSeats.length));
+        } else {
+          delta = -wager;
+        }
         setWagerDelta(delta);
         Backend.db
           .ref('pg_rooms/' + room.code + '/wagerSettled/' + user.uid)
@@ -244,21 +282,24 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     });
   };
 
-  // Forfeit settle (wagered online PvP only): if the opponent quits mid-game
-  // while status is 'playing', claim the win + 2x wager pot once and mark
-  // our own side settled + room 'over'. Guarded by wagerSettled,
-  // winSettled, wagerSettleKeyRef, and finishLockKeyRef so it can never
-  // double-pay — and so a later rejoin of this finished room cannot pay
-  // the forfeit win a second time through handleFinish either.
+  // Forfeit settle (wagered online PvP only): if every opponent quits
+  // mid-game while status is 'playing', claim the win + the full N x wager
+  // pot once and mark our own side settled + room 'over'. Guarded by
+  // wagerSettled, winSettled, wagerSettleKeyRef, and finishLockKeyRef so it
+  // can never double-pay — and so a later rejoin of this finished room
+  // cannot pay the forfeit win a second time through handleFinish either.
+  // With 3-4 players the settle fires only when I am the last player
+  // standing — a single quitter in a bigger room just leaves (see the
+  // turn-skip effect below, which moves play past their seat); the
+  // quitter's held wager stays in the pot for the eventual winner.
   useEffect(() => {
     if (mode !== 'online' || !room || finished) return;
     const wager = room.wager || 0;
     if (wager <= 0 || room.status !== 'playing' || room.state?.over) return;
     if (room.forfeit?.[user.uid]) return;
-    const otherForfeited = (room.seats || []).some(
-      uid => uid !== user.uid && room.forfeit?.[uid] === true
-    );
-    if (!otherForfeited) return;
+    const others = (room.seats || []).filter(uid => uid !== user.uid);
+    const otherForfeited = others.filter(uid => room.forfeit?.[uid] === true);
+    if (otherForfeited.length === 0 || otherForfeited.length < others.length) return;
     if (!room.wagerHeld?.[user.uid]) return;
 
     const sKey = room.code + ':' + roundKey;
@@ -273,7 +314,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
     wagerSettleKeyRef.current = sKey;
     finishLockKeyRef.current = sKey;
-    const delta = wager * 2;
+    const delta = wager * room.seats.length;
     const credit = PVP_WIN_POINTS + delta;
     setWagerDelta(delta);
 
@@ -292,11 +333,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     Sound.win();
     onPointsUpdated();
 
-    const forfeiterIdx = (room.seats || []).findIndex(
-      uid => uid !== user.uid && room.forfeit?.[uid] === true
+    const forfeiterNames = otherForfeited.map(
+      uid => names[(room.seats || []).indexOf(uid)] || 'Opponent'
     );
-    const forfeiterName =
-      forfeiterIdx >= 0 ? names[forfeiterIdx] || 'Opponent' : 'Opponent';
 
     setFinished({
       winner: mySeat,
@@ -305,13 +344,45 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       title: `${names[mySeat] || user.username} wins!`,
       body: (
         <div className="msg">
-          {forfeiterName} quit mid-game — you win by forfeit!
+          {forfeiterNames.join(' & ')} quit mid-game — you win by forfeit!
         </div>
       )
     });
     // onPointsUpdated is stable from App (refreshPoints).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, room, finished, roundKey, user.uid, user.username, mySeat, gameId, names]);
+
+  // Turn-skip for a forfeited seat (3-4 player rooms): turns cycle in seat
+  // order, so a quitter's turn would stall the game forever — nobody can
+  // move for their seat. When the room's current turn belongs to a
+  // forfeited seat, the lowest-seat player still in the game advances the
+  // shared turn by one (same state, turn + 1); the games apply the new turn
+  // from remote state like any other move. One designated skipper, so two
+  // phones can never double-skip. Skips repeat while the next seat is also
+  // forfeited; when only one player is left the forfeit-settle effect above
+  // ends the game instead. No-op in 2-player rooms (a single quitter there
+  // is always "last one standing" for the other side).
+  useEffect(() => {
+    if (mode !== 'online' || !room || finished) return;
+    if (room.status !== 'playing' || room.state?.over) return;
+    if (!room.state || typeof room.state.turn !== 'number') return;
+    const seats = room.seats || [];
+    if (seats.length < 3) return;
+    const forfeit = room.forfeit || {};
+    if (!Object.keys(forfeit).some(uid => forfeit[uid])) return;
+    const live = seats.filter(uid => !forfeit[uid]);
+    if (live.length < 2) return;
+    if (!live.includes(user.uid)) return;
+    const lowestLiveSeat = Math.min(...live.map(uid => seats.indexOf(uid)));
+    if (mySeat !== lowestLiveSeat) return;
+    const curSeat = ((room.turn % seats.length) + seats.length) % seats.length;
+    if (!forfeit[seats[curSeat]]) return;
+    Net.push({
+      state: { ...room.state, turn: room.turn + 1 },
+      turn: room.turn + 1
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, room, finished, user.uid, mySeat]);
 
   // Online rematch coordination over the existing room doc:
   // 1) Each player tapping "Play again" records rematch/<uid>: true.
@@ -523,6 +594,12 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
 
         {finished.body}
 
+        {mode === 'online' && room && (
+          <div className="text-[var(--muted)] text-xs">
+            Players: {names.join(' · ')}
+          </div>
+        )}
+
         {finished.result && (
           <div className="text-sm">
             {finished.pts ? (
@@ -549,7 +626,18 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         )}
 
         {mode === 'online' && rematchWaiting ? (
-          <div className="turn-banner">⏳ Waiting for the other player…</div>
+          <div className="turn-banner">
+            {room && room.seatsNeeded > 2
+              ? (() => {
+                  const pending = room.seats.filter(
+                    uid => uid !== user.uid && room.rematch?.[uid] !== true
+                  ).length;
+                  return pending === 0
+                    ? '⏳ Waiting for the other players…'
+                    : `⏳ Waiting for ${pending} more player${pending === 1 ? '' : 's'}…`;
+                })()
+              : '⏳ Waiting for the other player…'}
+          </div>
         ) : (
           <>
             {!otherDeclined && otherWantsRematch && (

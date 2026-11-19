@@ -25,7 +25,10 @@ interface WsNetState {
   found: string[];
   foundBy: number[];
   foundCells: Record<string, boolean>;
-  counts: [number, number];
+  // One count per seat (2 in solo/vs-computer, N in an online room).
+  // Turns rotate through every seat; the winner is whoever found the most
+  // words, with a tie at the top reported as tied seats.
+  counts: number[];
   turn: number;
   over: boolean;
 }
@@ -102,7 +105,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
   const [found, setFound] = useState<string[]>([]);
   const [foundBy, setFoundBy] = useState<number[]>([]);
   const [foundCells, setFoundCells] = useState<Record<string, boolean>>({});
-  const [counts, setCounts] = useState<[number, number]>([0, 0]);
+  const [counts, setCounts] = useState<number[]>(() => Array(names.length).fill(0));
   const [turn, setTurn] = useState<number>(0);
   const [sel, setSel] = useState<[number, number][] | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -122,7 +125,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
     found: [...found],
     foundBy: [...foundBy],
     foundCells: { ...foundCells },
-    counts: [counts[0], counts[1]],
+    counts: [...counts],
     turn,
     over
   });
@@ -137,7 +140,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
   useEffect(() => {
     if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
       pushedInit.current = true;
-      net.push({ puzzleIdx: -1, found: [], foundBy: [], foundCells: {}, counts: [0, 0], turn: 0, over: false });
+      net.push({ puzzleIdx: -1, found: [], foundBy: [], foundCells: {}, counts: Array(names.length).fill(0), turn: 0, over: false });
     }
     // Only on mount: the host's opening push must fire exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +163,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
     if (Array.isArray(s.found)) setFound([...s.found]);
     if (Array.isArray(s.foundBy)) setFoundBy([...s.foundBy]);
     if (s.foundCells && typeof s.foundCells === 'object') setFoundCells({ ...s.foundCells });
-    if (Array.isArray(s.counts) && s.counts.length === 2) setCounts([s.counts[0] || 0, s.counts[1] || 0]);
+    if (Array.isArray(s.counts)) setCounts(s.counts.map(c => c || 0));
     if (typeof s.turn === 'number') setTurn(s.turn);
     if (typeof s.over === 'boolean') setOver(s.over);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,19 +178,28 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
     if (!net || !over || !pz || finishFired.current) return;
     finishFired.current = true;
     const t = setTimeout(() => {
-      const winner = counts[0] === counts[1] ? -1 : counts[0] > counts[1] ? 0 : 1;
+      const top = Math.max(...counts);
+      const tied = counts.map((c, i) => (c === top ? i : -1)).filter(i => i >= 0);
+      const winner = tied.length === 1 ? tied[0] : -1;
+      const allTied = tied.length === names.length;
+      const standings = names
+        .map((n, i) => ({ n: n || 'Player ' + (i + 1), c: counts[i] ?? 0 }))
+        .sort((a, b) => b.c - a.c);
       onFinish({
         winner,
+        tied,
         title:
-          winner === -1
+          winner !== -1
+            ? `🏆 ${names[winner] || 'Player ' + (winner + 1)} found the most words!`
+            : allTied
             ? '🤝 Draw — dead even!'
-            : `🏆 ${names[winner] || 'Player ' + (winner + 1)} found the most words!`,
+            : `🤝 ${tied.map(i => names[i] || 'Player ' + (i + 1)).join(' & ')} tie — most words found!`,
         body: (
           <div className="paper my-2">
             <p>
               All {pz.words.length} words found on puzzle #{pz.id} —{' '}
               <b>
-                {names[0] || 'Player 1'} {counts[0]} · {names[1] || 'Player 2'} {counts[1]}
+                {standings.map(o => `${o.n} ${o.c}`).join(' · ')}
               </b>
               .
             </p>
@@ -219,9 +231,9 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
       // guest's grid, word list, scores and turn all come from this state.
       finishFired.current = false;
       setFoundBy([]);
-      setCounts([0, 0]);
+      setCounts(Array(names.length).fill(0));
       setTurn(0);
-      net.push({ puzzleIdx: idx, found: [], foundBy: [], foundCells: {}, counts: [0, 0], turn: 0, over: false });
+      net.push({ puzzleIdx: idx, found: [], foundBy: [], foundCells: {}, counts: Array(names.length).fill(0), turn: 0, over: false });
     }
   };
 
@@ -316,7 +328,8 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
           // the turn then alternates, and the synchronously computed next
           // state is pushed so the other phone applies it verbatim.
           const nextBy = [...foundBy, cur];
-          const nextCounts: [number, number] = [counts[0], counts[1]];
+          const nextCounts: number[] = [...counts];
+          while (nextCounts.length <= cur) nextCounts.push(0);
           nextCounts[cur] = nextCounts[cur] + 1;
           const nextTurn = turn + 1;
           const ended = nextFound.length >= pz.words.length;
@@ -550,7 +563,7 @@ export const WordSearchGame: React.FC<WordSearchGameProps> = ({ mode, names, onF
             : isMine
             ? `🟢 Your move — ${names[cur] || 'Player ' + (cur + 1)}`
             : `⏳ ${names[cur] || 'Player ' + (cur + 1)} to move`}
-          {` · 🔎 ${names[0] || 'Player 1'} ${counts[0]} · ${names[1] || 'Player 2'} ${counts[1]}`}
+          {` · 🔎 ${names.map((n, i) => `${n || 'Player ' + (i + 1)} ${counts[i] ?? 0}`).join(' · ')}`}
         </div>
       )}
       <PaperPanel>

@@ -19,12 +19,14 @@ interface GhostGameProps {
 }
 
 // Full shared state — one plain JSON object, always with `turn` and `over`
-// top-level. `msg` travels too so both phones show the same narration;
-// `proveWord` travels as part of the shape (always '' in pushed states —
-// the defender types locally and only the prove resolution is pushed).
+// top-level. `ghost` holds one GHOST-progress string per seat (2 in
+// vs-computer / pass-and-play, N in an online room); `msg` travels too so
+// both phones show the same narration; `proveWord` travels as part of the
+// shape (always '' in pushed states — the defender types locally and only
+// the prove resolution is pushed).
 interface GhostState {
   frag: string;
-  ghost: [string, string];
+  ghost: string[];
   round: number;
   turn: number;
   phase: 'play' | 'prove';
@@ -36,7 +38,7 @@ interface GhostState {
 
 const EMPTY: GhostState = {
   frag: '',
-  ghost: ['', ''],
+  ghost: [],
   round: 1,
   turn: 0,
   phase: 'play',
@@ -48,7 +50,7 @@ const EMPTY: GhostState = {
 
 export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net }) => {
   const [frag, setFrag] = useState<string>('');
-  const [ghost, setGhost] = useState<[string, string]>(['', '']);
+  const [ghost, setGhost] = useState<string[]>(() => Array(names.length).fill(''));
   const [round, setRound] = useState<number>(1);
   const [turn, setTurn] = useState<number>(0);
   const [phase, setPhase] = useState<'play' | 'prove'>('play');
@@ -71,7 +73,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
   // --- net sync -----------------------------------------------------------
   const serialize = (): GhostState => ({
     frag,
-    ghost: [...ghost] as [string, string],
+    ghost: [...ghost],
     round,
     turn,
     phase,
@@ -85,11 +87,14 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
   const pushedInit = useRef(false);
   const finishFired = useRef(false);
 
-  // Host publishes the opening state once; the guest waits for it.
+  // Host publishes the opening state once; the guest waits for it. The
+  // opening state carries the host's real ghost array (one '' per seat) —
+  // pushing EMPTY's [] would leave the guest with no entries and break the
+  // first round loss (undefined + 'G').
   useEffect(() => {
     if (net && net.mySeat === 0 && !net.remote && !pushedInit.current) {
       pushedInit.current = true;
-      net.push({ ...EMPTY, ghost: [...EMPTY.ghost] });
+      net.push(serialize());
     }
     // Only on mount: the host's opening push must fire exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,8 +107,8 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
     if (incoming === localJson.current) return;
     const s = net.remote as GhostState;
     if (typeof s.frag === 'string') setFrag(s.frag);
-    if (Array.isArray(s.ghost) && s.ghost.length === 2) {
-      setGhost([(s.ghost[0] ?? '') as string, (s.ghost[1] ?? '') as string]);
+    if (Array.isArray(s.ghost)) {
+      setGhost(s.ghost.map(g => (g ?? '') as string));
     }
     if (typeof s.round === 'number') setRound(s.round);
     if (typeof s.turn === 'number') setTurn(s.turn);
@@ -122,14 +127,29 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
     if (!over || finishFired.current) return;
     finishFired.current = true;
     const t = setTimeout(() => {
-      const losingSeat = ghost[0].length >= 5 ? 0 : 1;
-      const winner = 1 - losingSeat;
+      // The match ends when a seat's GHOST letters reach 5. The winner is
+      // the seat with the FEWEST letters — with 2 players that is the other
+      // player, exactly as before; with 3-4, a tie for fewest letters is a
+      // shared win (tied seats split the pot, +100 ⭐ each).
+      const losingSeat = ghost.findIndex(g => (g || '').length >= 5);
+      const fewest = Math.min(...ghost.map(g => (g || '').length));
+      const tied = ghost.map((g, i) => ((g || '').length === fewest ? i : -1)).filter(i => i >= 0);
+      const winner = tied.length === 1 ? tied[0] : -1;
+      // Standings: fewest GHOST letters first (fewer letters = winning).
+      const standings = names
+        .map((n, i) => ({ n, l: (ghost[i] || '').length }))
+        .sort((a, b) => a.l - b.l);
       onFinish({
         winner,
-        title: `${names[winner]} wins the match!`,
+        tied,
+        title:
+          winner !== -1
+            ? `${names[winner]} wins the match!`
+            : `🤝 ${tied.map(i => names[i]).join(' & ')} tie the match!`,
         body: (
           <div className="msg">
-            {names[losingSeat]} has spelled GHOST and loses the match.
+            {names[losingSeat]} has spelled GHOST and loses the match. Standings:{' '}
+            {standings.map(o => `${o.n} "${'GHOST'.slice(0, o.l) || '—'}"`).join(' · ')}.
           </div>
         ),
       });
@@ -141,7 +161,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
   // Apply a fully computed next state locally and publish it online.
   const commit = (next: GhostState) => {
     setFrag(next.frag);
-    setGhost([...next.ghost] as [string, string]);
+    setGhost([...next.ghost]);
     setRound(next.round);
     setTurn(next.turn);
     setPhase(next.phase);
@@ -156,7 +176,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
   // takes the next GHOST letter, the fragment clears, the round advances,
   // and the loser starts the next round (turn = losing seat).
   const loseRoundState = (s: GhostState, losingSeat: number, reason: string): GhostState => {
-    const nextGhost = [...s.ghost] as [string, string];
+    const nextGhost = [...s.ghost];
     nextGhost[losingSeat] += 'GHOST'[nextGhost[losingSeat].length];
     return {
       ...s,
@@ -246,7 +266,9 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
     if (!isMine || over) return;
     Sound.click();
     const challenger = cur;
-    const defender = 1 - challenger;
+    // The defender is the next seat in rotation. With 2 players that is
+    // the other player, exactly as before.
+    const defender = (challenger + 1) % names.length;
 
     if (mode === 'pvc' && defender === 1) {
       // Challenging the bot
@@ -273,9 +295,11 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
     Sound.click();
     const w = proveWord.trim().toLowerCase();
     const ok = w.startsWith(frag) && w.length > frag.length && DICTIONARY_SET.has(w);
+    // The challenger is the seat before the defender in rotation.
+    const challenger = (proveSeat - 1 + names.length) % names.length;
     if (ok) {
       loseRound(
-        1 - proveSeat,
+        challenger,
         `${names[proveSeat]} proved it with "${w.toUpperCase()}" — the challenger loses the round.`
       );
     } else {
@@ -303,8 +327,8 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
     <div>
       <PaperPanel>
         <h3 className="font-bold text-sm mb-1 text-[#17457e]">
-          Round {round} · 👻 {names[0]}: "{ghost[0] || '—'}" · {names[1]}: "
-          {ghost[1] || '—'}"
+          Round {round} · 👻{' '}
+          {names.map((n, i) => `${n}: "${ghost[i] || '—'}"`).join(' · ')}
         </h3>
 
         {msg && <div className="msg my-2">{msg}</div>}
@@ -371,7 +395,7 @@ export const GhostGame: React.FC<GhostGameProps> = ({ mode, names, onFinish, net
               disabled={frag.length < 2 || !isMine || over}
               className="btn secondary text-xs"
             >
-              ⚔️ Challenge {names[1 - cur]} — no word continues this!
+              ⚔️ Challenge {names[(cur + 1) % names.length]} — no word continues this!
             </button>
 
             <p className="muted text-xs text-center mt-2">

@@ -22,6 +22,13 @@ interface TttState {
 
 const EMPTY: TttState = { board: Array(9).fill(''), turn: 0, over: false };
 
+// 3-4 player variant: every seat plays its own mark on the same 3x3
+// board, turns cycle in seat order, first to complete a line wins; a full
+// board with no line is a draw (a full tie — every seat shares it). 2-player
+// games are unchanged: seats 0/1 are X/O exactly as before.
+const MARKS = ['X', 'O', '△', '□'];
+const MARK_COLORS = ['#17457e', '#c0392b', '#1e8e4e', '#8e44ad'];
+
 export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish, net }) => {
   const [board, setBoard] = useState<string[]>(() => [...EMPTY.board]);
   const [turn, setTurn] = useState<number>(0);
@@ -65,21 +72,24 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish, net
     finishFired.current = true;
     const t = setTimeout(() => {
       const w = Logic.tttWin(board);
-      if (w === 'X') {
+      if (w === 'draw') {
         onFinish({
-          winner: 0,
-          title: `${names[0]} wins!`,
-          body: <div className="msg">Three in a row for X!</div>
+          winner: -1,
+          tied: names.map((_, i) => i),
+          title: 'Draw!',
+          body: <div className="msg">A cat's game — nobody got three in a row.</div>
         });
-      } else if (w === 'O') {
+      } else if (w) {
+        const winner = MARKS.indexOf(w);
         onFinish({
-          winner: 1,
-          title: `${names[1]} wins!`,
-          body: <div className="msg">Three in a row for O!</div>
+          winner,
+          title: `${names[winner]} wins!`,
+          body: <div className="msg">Three in a row for {w}!</div>
         });
       } else {
         onFinish({
           winner: -1,
+          tied: names.map((_, i) => i),
           title: 'Draw!',
           body: <div className="msg">A cat's game — nobody got three in a row.</div>
         });
@@ -102,7 +112,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish, net
     if (board[i] || !isMine || over) return;
     Sound.click();
     const nextBoard = [...board];
-    nextBoard[i] = cur === 0 ? 'X' : 'O';
+    nextBoard[i] = MARKS[cur];
     const nextTurn = turn + 1;
     const ended = checkEnd(nextBoard);
     setBoard(nextBoard);
@@ -172,14 +182,15 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ mode, names, onFinish, net
           })}
         </div>
         <p className="muted text-center text-xs">
-          {names[0]} is{' '}
-          <span className="chalk-inline" style={{ color: '#17457e' }}>
-            X
-          </span>{' '}
-          · {names[1]} is{' '}
-          <span className="chalk-inline" style={{ color: '#c0392b' }}>
-            O
-          </span>
+          {names.map((n, i) => (
+            <span key={i}>
+              {i > 0 ? ' · ' : ''}
+              {n} is{' '}
+              <span className="chalk-inline" style={{ color: MARK_COLORS[i] }}>
+                {MARKS[i]}
+              </span>
+            </span>
+          ))}
         </p>
       </PaperPanel>
     </div>

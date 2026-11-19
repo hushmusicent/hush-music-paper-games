@@ -21,7 +21,11 @@ type DotsState = ReturnType<typeof Logic.dotsNew>;
 
 export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinish, level: levelProp, net }) => {
   const level = Math.max(1, Math.min(50, levelProp || 1));
-  const [state, setState] = useState(() => { const sz = Logic.dotsSizeForLevel(level); return Logic.dotsNew(sz.w, sz.h); });
+  // Scores run one entry per seat: 2 in vs-computer / pass-and-play, N in
+  // an online room. Turns already cycle in seat order (turn % names.length)
+  // and a completed box still earns another move, so the game rotates
+  // naturally with 3-4 players; the winner is whoever claims the most boxes.
+  const [state, setState] = useState(() => { const sz = Logic.dotsSizeForLevel(level); return Logic.dotsNew(sz.w, sz.h, names.length); });
 
   const cur = state.turn % names.length;
   const isMine = net ? cur === net.mySeat : mode === 'pvc' ? cur === 0 : true;
@@ -65,7 +69,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
     if (
       typeof s.cols === 'number' && typeof s.rows === 'number' &&
       Array.isArray(s.h) && Array.isArray(s.v) && Array.isArray(s.boxes) &&
-      Array.isArray(s.scores) && s.scores.length === 2 &&
+      Array.isArray(s.scores) && s.scores.length >= 2 &&
       typeof s.turn === 'number' && typeof s.over === 'boolean'
     ) {
       setState({
@@ -76,7 +80,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
         boxes: [...s.boxes],
         turn: s.turn,
         over: s.over,
-        scores: [s.scores[0], s.scores[1]] as [number, number]
+        scores: [...s.scores]
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,16 +91,26 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
     if (!state.over || finishFired.current) return;
     finishFired.current = true;
     const t = setTimeout(() => {
-      const s0 = state.scores[0];
-      const s1 = state.scores[1];
-      const winner = s0 === s1 ? -1 : s0 > s1 ? 0 : 1;
+      const top = Math.max(...state.scores);
+      const tied = state.scores.map((s, i) => (s === top ? i : -1)).filter(i => i >= 0);
+      const winner = tied.length === 1 ? tied[0] : -1;
+      const allTied = tied.length === names.length;
+      const standings = names
+        .map((n, i) => ({ n, s: state.scores[i] ?? 0 }))
+        .sort((a, b) => b.s - a.s);
       onFinish({
         winner,
-        title: winner === -1 ? 'Draw!' : `${names[winner]} wins!`,
+        tied,
+        title:
+          winner !== -1
+            ? `${names[winner]} wins!`
+            : allTied
+            ? 'Draw!'
+            : `🤝 ${tied.map(i => names[i]).join(' & ')} tie at the top!`,
         body: (
           <div className="msg">
-            Level {effLevel} · {state.cols}×{state.rows} boxes — final: {names[0]}: {s0} ·{' '}
-            {names[1]}: {s1}.
+            Level {effLevel} · {state.cols}×{state.rows} boxes — final:{' '}
+            {standings.map(o => `${o.n}: ${o.s}`).join(' · ')}.
           </div>
         )
       });
@@ -164,7 +178,14 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
   const X = (c: number) => PAD + c * SP;
   const Y = (r: number) => PAD + r * SP;
   const canTap = isMine && !state.over;
-  const marks = ['X', 'O'];
+  const marks = ['X', 'O', '△', '□'];
+  const SEAT_COLORS = ['#1c64d8', '#d84a35', '#1e8e4e', '#8e44ad'];
+  const SEAT_WASH = [
+    'rgba(28,100,216,0.20)',
+    'rgba(224,101,79,0.22)',
+    'rgba(30,142,78,0.20)',
+    'rgba(142,68,173,0.20)'
+  ];
 
   return (
     <div>
@@ -178,15 +199,14 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
 
       <PaperPanel>
         <div className="flex gap-2 mb-2" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="chip">
-            <span className="chalk-inline">X</span> {names[0]}: {state.scores[0]}
-          </span>
-          <span className="chip">
-            <span className="chalk-inline" style={{ color: '#c0392b' }}>
-              O
-            </span>{' '}
-            {names[1]}: {state.scores[1]}
-          </span>
+          {names.map((n, i) => (
+            <span key={i} className="chip">
+              <span className="chalk-inline" style={{ color: SEAT_COLORS[i] }}>
+                {marks[i]}
+              </span>{' '}
+              {n}: {state.scores[i] ?? 0}
+            </span>
+          ))}
           <span className="chip">
             🎚️ Level {effLevel} · {cols}×{rows}
           </span>
@@ -213,7 +233,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
                   y={Y(br)}
                   width={SP}
                   height={SP}
-                  fill={o === 1 ? 'rgba(28,100,216,0.20)' : 'rgba(224,101,79,0.22)'}
+                  fill={SEAT_WASH[(o - 1) % SEAT_WASH.length]}
                 />
                 <text
                   x={X(bc) + SP / 2}
@@ -221,7 +241,7 @@ export const DotsAndBoxes: React.FC<DotsAndBoxesProps> = ({ mode, names, onFinis
                   textAnchor="middle"
                   dominantBaseline="central"
                   fontSize={SP * 0.55}
-                  fill={o === 1 ? '#1c64d8' : '#d84a35'}
+                  fill={SEAT_COLORS[(o - 1) % SEAT_COLORS.length]}
                   style={{
                     fontFamily: "'Schoolbell', 'Chalkboard SE', 'Comic Sans MS', cursive"
                   }}

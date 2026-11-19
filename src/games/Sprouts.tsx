@@ -110,7 +110,11 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: d
     if (!state.over || finishFired.current) return;
     finishFired.current = true;
     const t = setTimeout(() => {
-      const winner = 1 - (state.turn % names.length);
+      // The player to move with no legal move left loses, so the winner is
+      // the player who made the last move. With 2 players that is the
+      // other seat, exactly as before; with 3-4 it is the previous seat in
+      // rotation.
+      const winner = (state.turn - 1 + names.length) % names.length;
       onFinish({
         winner,
         title: `${names[winner]} wins!`,
@@ -152,7 +156,7 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: d
     Sound.click();
     const next = JSON.parse(JSON.stringify(state));
     next.sel = -1;
-    sproutsApply(next, Math.min(a, b), Math.max(a, b), mid);
+    sproutsApply(next, Math.min(a, b), Math.max(a, b), mid, names.length);
     // No legal move left for the next player: the game is over. Mark it on
     // the shared state so the finish fires from state on both phones.
     if (sproutsLegal(next).length === 0) next.over = true;
@@ -169,7 +173,7 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: d
           const [botA, botB, botMid] = pickA(moves);
           const botNext = JSON.parse(JSON.stringify(prev));
           botNext.sel = -1;
-          sproutsApply(botNext, botA, botB, botMid);
+          sproutsApply(botNext, botA, botB, botMid, names.length);
           Sound.click();
           if (sproutsLegal(botNext).length === 0) botNext.over = true;
           return botNext;
@@ -215,7 +219,7 @@ export const Sprouts: React.FC<SproutsProps> = ({ mode, names, onFinish, dots: d
                 key={idx}
                 d={`M${A.x},${A.y} Q${e.mx},${e.my} ${e.mx},${e.my} T${B.x},${B.y}`}
                 fill="none"
-                stroke={e.by === 0 ? '#2470c9' : '#c0392b'}
+                stroke={['#2470c9', '#c0392b', '#1e8e4e', '#8e44ad'][e.by % 4] || '#2470c9'}
                 strokeWidth="3.5"
                 strokeLinecap="round"
               />

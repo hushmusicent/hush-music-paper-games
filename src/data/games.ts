@@ -154,7 +154,8 @@ export const GAMES_METADATA: Record<GameId, GameMeta> = {
   }
 };
 
-// The 8 games with real two-phone head-to-head play. The other 7 party
+// The 8 games with real multi-phone head-to-head play (2-4 players; turns
+// cycle in seat order, rooms wait until full). The other 7 party
 // games still get a live room (chat + voice), but the game itself runs
 // hotseat-style on the host's phone. One list so the home grid, the
 // record table and the lobby all agree on which is which.

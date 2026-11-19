@@ -50,6 +50,10 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
   const cur = turn % names.length;
   const isMine = net ? cur === net.mySeat : mode === 'pvc' ? cur === 0 : true;
 
+  // One color per seat, in seat order: blue, red, green, purple.
+  const SEAT_COLORS = ['#2470c9', '#c0392b', '#1e8e4e', '#8e44ad'];
+  const SEAT_COLOR_NAMES = ['blue', 'red', 'green', 'purple'];
+
   // --- net sync -----------------------------------------------------------
   const serialize = (): SimState => ({ edges, turn, over, dots: count, shape: boardShape });
   const localJson = useRef('');
@@ -97,7 +101,9 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
     const t = setTimeout(() => {
       let loser = -1;
       let tri: [number, number, number] | null = null;
-      for (const seat of [0, 1]) {
+      // Every seat draws in its own color now, so check each seat's edges
+      // for a triangle — not just seats 0/1.
+      for (let seat = 0; seat < names.length; seat++) {
         const mineEdges = Object.keys(edges).filter(k => edges[k] === seat);
         const found = Logic.simHasTriangle(mineEdges);
         if (found) {
@@ -107,7 +113,10 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
         }
       }
       if (loser >= 0 && tri) {
-        const winner = 1 - loser;
+        // The player who completed a triangle in their own color loses;
+        // the next seat in rotation wins. With 2 players that is the
+        // other player, exactly as before.
+        const winner = (loser + 1) % names.length;
         onFinish({
           winner,
           title: `${names[winner]} wins!`,
@@ -125,7 +134,7 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
           title: `${names[lastSeat]} wins!`,
           body: (
             <div className="msg">
-              The board is full — {names[1 - lastSeat]} has no move and loses.
+              The board is full — {names[(lastSeat + 1) % names.length]} has no move and loses.
             </div>
           )
         });
@@ -249,7 +258,7 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
                 y1={POS[a][1]}
                 x2={POS[b][0]}
                 y2={POS[b][1]}
-                stroke={p === 0 ? '#2470c9' : '#c0392b'}
+                stroke={SEAT_COLORS[p % SEAT_COLORS.length]}
                 strokeWidth="4"
               />
             );
@@ -275,8 +284,8 @@ export const SimGame: React.FC<SimGameProps> = ({ mode, names, onFinish, dots, s
 
         <p className="muted text-xs text-center mt-2">
           You draw in{' '}
-          <b style={{ color: cur === 0 ? '#2470c9' : '#c0392b' }}>
-            {cur === 0 ? 'blue' : 'red'}
+          <b style={{ color: SEAT_COLORS[cur % SEAT_COLORS.length] }}>
+            {SEAT_COLOR_NAMES[cur % SEAT_COLOR_NAMES.length]}
           </b>
           . Tap two dots to connect them. Complete a triangle in YOUR color and you
           lose!

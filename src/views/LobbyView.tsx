@@ -25,6 +25,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [room, setRoom] = useState<RoomDoc | null>(() => Net.room);
   const [lastRoom] = useState<string>(() => store.get('lastroom', ''));
   const [wager, setWager] = useState(0);
+  // 3-4 player PvP (head-to-head games only): the host picks the seat
+  // count at room create. Party games stay 2 seats — the game itself runs
+  // on the host's phone and the room is chat + voice. Net.create already
+  // takes seatsNeeded; the room watcher below auto-starts when seats fill,
+  // so no net.ts change is needed for the picker.
+  const [players, setPlayers] = useState(2);
   const [myPoints, setMyPoints] = useState(START_POINTS);
   // Guest wager accept card: set when the guest taps Join on a wagered
   // room. Nothing is joined until Accept — Decline walks away clean.
@@ -33,6 +39,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     game: GameId;
     wager: number;
     balance: number;
+    // Seats in the room — the pot is wager x seats, so a 3-player room's
+    // accept card must show 3x, not the 2-player 2x.
+    seatsNeeded: number;
   } | null>(null);
   const online = Backend.mode === 'firebase';
   const headToHead = HEAD_TO_HEAD_GAMES.includes(gameId);
@@ -93,7 +102,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     Sound.click();
     setBusy(true);
     setErrorMsg('');
-    const code = await Net.create(gameId, 2, wager);
+    const code = await Net.create(gameId, headToHead ? players : 2, wager);
     setBusy(false);
     if (!code) setErrorMsg('Could not create a room — check the connection and try again.');
     // The room watcher above moves us into the game when the guest joins.
@@ -134,7 +143,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         code: c,
         game: peek.room.game,
         wager: w,
-        balance: peek.balance ?? 0
+        balance: peek.balance ?? 0,
+        seatsNeeded: peek.room.seatsNeeded || 2
       });
       setBusy(false);
       return;
@@ -191,6 +201,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       (uid, i) => room.names[uid] || 'Player ' + (i + 1)
     );
     const full = room.seats.length >= room.seatsNeeded;
+    const waiting = room.seatsNeeded - room.seats.length;
     return (
       <div className="space-y-3">
         <button onClick={onBack} className="btn secondary small">
@@ -211,18 +222,20 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 {i === 0 ? ' (host)' : ''}
               </div>
             ))}
-            {room.seats.length < room.seatsNeeded && (
-              <div className="text-[var(--muted)] text-xs mt-1">
-                Seat 2: <i>waiting for opponent…</i>
+            {Array.from({ length: waiting }).map((_, k) => (
+              <div key={'w' + k} className="text-[var(--muted)] text-xs mt-1">
+                Seat {room.seats.length + k + 1}: <i>waiting for player…</i>
               </div>
-            )}
+            ))}
           </div>
           <div className="text-sm font-bold">
-            {full ? 'Both players in — starting…' : '⏳ Waiting for your opponent to join…'}
+            {full
+              ? `All ${room.seatsNeeded} players in — starting…`
+              : `⏳ Waiting for ${waiting} more player${waiting === 1 ? '' : 's'}…`}
           </div>
           {(room.wager || 0) > 0 && (
             <div className="text-sm font-bold">
-              💰 Wager: {room.wager} ⭐ — winner takes {(room.wager || 0) * 2} ⭐
+              💰 Wager: {room.wager} ⭐ — winner takes {(room.wager || 0) * room.seatsNeeded} ⭐
             </div>
           )}
           {!headToHead && (
@@ -254,8 +267,18 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div className="card space-y-2">
             <h3 className="font-bold text-base">Create a room</h3>
             <p className="text-xs text-[var(--muted)]">
-              2 players — your opponent joins with the 4-digit code. The game
-              starts on its own when they join.
+              {headToHead ? (
+                <>
+                  {players} player{players === 1 ? '' : 's'} — your opponents join
+                  with the 4-digit code. The game starts on its own when the
+                  room fills.
+                </>
+              ) : (
+                <>
+                  2 players — your opponent joins with the 4-digit code. The game
+                  starts on its own when they join.
+                </>
+              )}
               {headToHead && (
                 <>
                   {' '}Winning earns <b>200 ⭐</b>
@@ -263,6 +286,27 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 </>
               )}
             </p>
+            {headToHead && (
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">
+                  👥 Players — how many seats in this room?
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[2, 3, 4].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => {
+                        Sound.click();
+                        setPlayers(n);
+                      }}
+                      className={`btn small ${n === players ? '' : 'secondary'}`}
+                    >
+                      {n} players
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {headToHead && (
               <div>
                 <div className="text-xs text-[var(--muted)] mb-1">
@@ -285,8 +329,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 </div>
                 {wager > 0 && (
                   <div className="text-xs text-[var(--muted)] mt-1">
-                    {wager} ⭐ each — winner takes {wager * 2} ⭐, tie refunds
-                    both.
+                    {wager} ⭐ each — winner takes {wager * players} ⭐
+                    {players > 2
+                      ? ` (${players}× ${wager}); a tie at the top splits the pot`
+                      : ', tie refunds both'}
+                    .
                   </div>
                 )}
               </div>
@@ -321,8 +368,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <h3 className="font-bold text-base">💰 Wagered room — {GAMES_METADATA[wagerOffer.game]?.name || 'Game'}</h3>
               <p className="text-sm">
                 This room has a wager of <b>{wagerOffer.wager} ⭐</b> — winner
-                takes the pot of <b>{wagerOffer.wager * 2} ⭐</b>, tie refunds
-                both. You have {wagerOffer.balance} ⭐.
+                takes the pot of{' '}
+                <b>{wagerOffer.wager * wagerOffer.seatsNeeded} ⭐</b>,{' '}
+                {wagerOffer.seatsNeeded > 2
+                  ? 'a tie at the top splits the pot'
+                  : 'tie refunds both'}
+                . You have {wagerOffer.balance} ⭐.
               </p>
               {wagerOffer.balance < wagerOffer.wager && (
                 <div className="err text-xs">

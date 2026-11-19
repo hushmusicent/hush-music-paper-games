@@ -72,6 +72,11 @@ export interface FinishResult {
   body?: React.ReactNode;
   result?: 'w' | 'l' | 't' | null;
   pts?: number;
+  // Seats tied for first (3-4 player games: partial tie for the top score).
+  // When winner is -1 and tied is absent, the tie covers every seat (a
+  // full tie / draw). handleFinish uses this to split the wager pot
+  // equally among the tied seats and pay the 100 ⭐ tie credit to each.
+  tied?: number[];
 }
 
 // Live-room sync prop, passed to a game only in online mode. The game

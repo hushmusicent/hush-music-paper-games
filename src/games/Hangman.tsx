@@ -96,7 +96,12 @@ export const Hangman: React.FC<HangmanProps> = ({ mode, names, onFinish, level: 
         });
       } else {
         const losingSeat = lastSeat;
-        const winningSeat = mode === 'pvc' ? 1 : 1 - losingSeat;
+        // The next seat in rotation after the loser wins the round. With
+        // 2 players that is the other player, exactly as before; with 3-4
+        // it is the player who would have guessed next. The host stays the
+        // setter (their word is the shared word) — only the guessing turns
+        // rotate through every seat.
+        const winningSeat = mode === 'pvc' ? 1 : (losingSeat + 1) % names.length;
         onFinish({
           winner: winningSeat,
           title: mode === 'pvc' ? 'Game Over' : `${names[winningSeat]} wins!`,
