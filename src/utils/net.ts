@@ -260,6 +260,13 @@ export interface RoomDoc {
   wager?: number;
   wagerHeld?: Record<string, boolean>;
   wagerSettled?: Record<string, boolean>;
+  // Win settle (online PvP only): the 200 ⭐ win + win record pay once per
+  // game per player. Set by the winner's client at the finish (normal win
+  // in GameActiveView.handleFinish, forfeit win in the forfeit effect).
+  // A rejoin mounts a fresh GameActiveView, so the per-mount ref guard
+  // cannot cover it — without this flag every rejoin of a finished room
+  // would pay the win again. Cleared by the rematch reset.
+  winSettled?: Record<string, boolean>;
 }
 
 // Wager choices for a PvP room, in points. 0 = free game, no wager.
@@ -318,39 +325,6 @@ export const Net = {
     } catch (e) {
       console.warn('room create failed', e);
       return null;
-    }
-  },
-
-  // Read-only look at a room before joining: the guest wager accept card
-  // (LobbyView) needs the wager + the guest's balance before any seat is
-  // taken. Same guards as join, but nothing is written — join() still
-  // re-checks everything when Accept is tapped, so a room that fills or
-  // a balance that drops in between cannot slip through.
-  async peek(code: string): Promise<{
-    ok: boolean;
-    error?: string;
-    room?: RoomDoc;
-    rejoined?: boolean;
-    balance?: number;
-  }> {
-    const c = (code || '').trim();
-    if (!NetAuth.user) return { ok: false, error: 'Log in first.' };
-    if (!/^[0-9]{4}$/.test(c)) return { ok: false, error: 'Enter a 4-digit room code.' };
-    try {
-      const snap = await Backend.db.ref('pg_rooms/' + c).get();
-      if (!snap.exists()) return { ok: false, error: 'Room not found.' };
-      const room = snap.val() as RoomDoc;
-      const alreadySeated = room.seats.includes(NetAuth.user.uid);
-      if (alreadySeated) {
-        return { ok: true, room, rejoined: room.status !== 'waiting' };
-      }
-      if (room.status !== 'waiting') return { ok: false, error: 'Game already started.' };
-      if (room.seats.length >= room.seatsNeeded) return { ok: false, error: 'Room is full.' };
-      const wager = room.wager || 0;
-      const balance = wager > 0 ? await OnlinePoints.get(NetAuth.user.uid) : undefined;
-      return { ok: true, room, balance };
-    } catch (e: any) {
-      return { ok: false, error: (e && e.message) || 'Could not join.' };
     }
   },
 

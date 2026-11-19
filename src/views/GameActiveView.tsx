@@ -154,6 +154,24 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       earnedPts = recordRes === 'w' ? PVP_WIN_POINTS : 0;
     }
 
+    // Room-level win-settle flag (online PvP only): the 200 ⭐ win + win
+    // record pay once per game per player, across mounts. The per-mount
+    // finishLockKeyRef above cannot cover a rejoin (fresh mount), and
+    // every head-to-head game re-fires onFinish from applied remote
+    // over-state — so without this, rejoining a finished room as the
+    // winner would farm +200 ⭐ and +1 win on every rejoin. Mirrors the
+    // wagerSettled pattern below: the room flag is the cross-mount guard.
+    let winAlreadySettled = false;
+    if (mode === 'online' && room && recordRes === 'w') {
+      winAlreadySettled = !!room.winSettled?.[user.uid];
+      if (!winAlreadySettled) {
+        Backend.db
+          .ref('pg_rooms/' + room.code + '/winSettled/' + user.uid)
+          .set(true)
+          .catch(() => {});
+      }
+    }
+
     // Wager outcome (online PvP only): the winner takes the pot (2x wager)
     // on top of the normal win payout, a tie refunds both wagers. The delta
     // is folded into the single points write below — two back-to-back
@@ -185,6 +203,14 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       earnedPts = result.pts;
     }
 
+    // A repeat win (rejoin of a finished room) credits nothing — the win
+    // was already paid when the flag above was set. Zeroing here (after
+    // the payout fallback) also keeps the results card honest: it shows
+    // no +200 line for points that never land.
+    if (winAlreadySettled) {
+      earnedPts = 0;
+    }
+
     // One points write for the whole finish: win payout + wager pot/refund.
     // (A loss pays nothing — its wager was already held at game start.)
     // NOTE: the store is picked by the ACCOUNT mode (Backend.mode), not the
@@ -202,7 +228,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       }
     }
 
-    if (recordRes && mode !== 'hotseat') {
+    if (recordRes && mode !== 'hotseat' && !winAlreadySettled) {
       if (onlineAccount) {
         OnlinePoints.record(user.uid, gameId, recordRes);
       } else {
@@ -221,7 +247,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   // Forfeit settle (wagered online PvP only): if the opponent quits mid-game
   // while status is 'playing', claim the win + 2x wager pot once and mark
   // our own side settled + room 'over'. Guarded by wagerSettled,
-  // wagerSettleKeyRef, and finishLockKeyRef so it can never double-pay.
+  // winSettled, wagerSettleKeyRef, and finishLockKeyRef so it can never
+  // double-pay — and so a later rejoin of this finished room cannot pay
+  // the forfeit win a second time through handleFinish either.
   useEffect(() => {
     if (mode !== 'online' || !room || finished) return;
     const wager = room.wager || 0;
@@ -236,6 +264,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     const sKey = room.code + ':' + roundKey;
     if (
       room.wagerSettled?.[user.uid] ||
+      room.winSettled?.[user.uid] ||
       wagerSettleKeyRef.current === sKey ||
       finishLockKeyRef.current === sKey
     ) {
@@ -256,7 +285,8 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       .ref('pg_rooms/' + room.code)
       .update({
         status: 'over',
-        [`wagerSettled/${user.uid}`]: true
+        [`wagerSettled/${user.uid}`]: true,
+        [`winSettled/${user.uid}`]: true
       })
       .catch(() => {});
     Sound.win();
@@ -326,7 +356,9 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
         // A rematch re-uses the same wager: clear the hold/settle flags so
         // the next game holds and settles fresh.
         wagerHeld: null,
-        wagerSettled: null
+        wagerSettled: null,
+        // ... and the win-settle flag, so the new game's winner can pay.
+        winSettled: null
       });
       return;
     }
