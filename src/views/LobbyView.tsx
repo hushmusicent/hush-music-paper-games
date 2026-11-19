@@ -26,6 +26,14 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [lastRoom] = useState<string>(() => store.get('lastroom', ''));
   const [wager, setWager] = useState(0);
   const [myPoints, setMyPoints] = useState(START_POINTS);
+  // Guest wager accept card: set when the guest taps Join on a wagered
+  // room. Nothing is joined until Accept — Decline walks away clean.
+  const [wagerOffer, setWagerOffer] = useState<{
+    code: string;
+    game: GameId;
+    wager: number;
+    balance: number;
+  } | null>(null);
   const online = Backend.mode === 'firebase';
   const headToHead = HEAD_TO_HEAD_GAMES.includes(gameId);
 
@@ -91,15 +99,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     // The room watcher above moves us into the game when the guest joins.
   };
 
-  const handleJoinRoom = async () => {
-    const c = joinCode.trim();
-    if (!c) {
-      setErrorMsg('Enter a 4-digit room code.');
-      return;
-    }
-    Sound.click();
-    setBusy(true);
-    setErrorMsg('');
+  // Actually take the seat. Assumes busy is already true; clears it.
+  const completeJoin = async (c: string) => {
     const res = await Net.join(c);
     setBusy(false);
     if (!res.ok) {
@@ -113,18 +114,69 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     // Otherwise the watcher moves us in when the room fills / starts.
   };
 
+  // Peek first: a wagered room shows the guest an accept card before any
+  // seat is taken; free rooms (and already-seated rejoins) join straight
+  // away as before.
+  const startJoin = async (c: string) => {
+    const peek = await Net.peek(c);
+    if (!peek.ok || !peek.room) {
+      setBusy(false);
+      setErrorMsg(peek.error || 'Could not join.');
+      return;
+    }
+    if (peek.rejoined) {
+      await completeJoin(c);
+      return;
+    }
+    const w = peek.room.wager || 0;
+    if (w > 0) {
+      setWagerOffer({
+        code: c,
+        game: peek.room.game,
+        wager: w,
+        balance: peek.balance ?? 0
+      });
+      setBusy(false);
+      return;
+    }
+    await completeJoin(c);
+  };
+
+  const handleJoinRoom = async () => {
+    const c = joinCode.trim();
+    if (!c) {
+      setErrorMsg('Enter a 4-digit room code.');
+      return;
+    }
+    Sound.click();
+    setBusy(true);
+    setErrorMsg('');
+    setWagerOffer(null);
+    await startJoin(c);
+  };
+
+  const handleAcceptWager = async () => {
+    if (!wagerOffer) return;
+    Sound.click();
+    setBusy(true);
+    setErrorMsg('');
+    const c = wagerOffer.code;
+    setWagerOffer(null);
+    await completeJoin(c);
+  };
+
+  const handleDeclineWager = () => {
+    Sound.click();
+    setWagerOffer(null);
+  };
+
   const handleRejoin = async () => {
     if (!lastRoom) return;
     Sound.click();
     setBusy(true);
     setErrorMsg('');
-    const res = await Net.join(lastRoom);
-    setBusy(false);
-    if (!res.ok) {
-      setErrorMsg(res.error || 'Could not rejoin.');
-      return;
-    }
-    if (res.rejoined) onStartRoomGame(lastRoom);
+    setWagerOffer(null);
+    await startJoin(lastRoom);
   };
 
   const handleLeave = async () => {
@@ -249,7 +301,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <label className="text-xs text-[var(--muted)]">Room code</label>
             <input
               value={joinCode}
-              onChange={e => setJoinCode(e.target.value)}
+              onChange={e => {
+                setJoinCode(e.target.value);
+                setWagerOffer(null);
+              }}
               inputMode="numeric"
               placeholder="4-digit code"
               maxLength={4}
@@ -260,6 +315,34 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               {busy ? 'Joining…' : 'Join room'}
             </button>
           </div>
+
+          {wagerOffer && (
+            <div className="card space-y-2">
+              <h3 className="font-bold text-base">💰 Wagered room — {GAMES_METADATA[wagerOffer.game]?.name || 'Game'}</h3>
+              <p className="text-sm">
+                This room has a wager of <b>{wagerOffer.wager} ⭐</b> — winner
+                takes the pot of <b>{wagerOffer.wager * 2} ⭐</b>, tie refunds
+                both. You have {wagerOffer.balance} ⭐.
+              </p>
+              {wagerOffer.balance < wagerOffer.wager && (
+                <div className="err text-xs">
+                  You need {wagerOffer.wager} ⭐ to join this wagered room.
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAcceptWager}
+                  className="btn"
+                  disabled={busy || wagerOffer.balance < wagerOffer.wager}
+                >
+                  {busy ? 'Joining…' : 'Accept — join for ' + wagerOffer.wager + ' ⭐'}
+                </button>
+                <button onClick={handleDeclineWager} className="btn secondary" disabled={busy}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
 
           {lastRoom && (
             <div className="card space-y-2">
