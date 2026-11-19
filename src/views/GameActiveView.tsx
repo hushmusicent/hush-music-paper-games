@@ -102,6 +102,7 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   const [wagerDelta, setWagerDelta] = useState(0);
   const wagerHoldKeyRef = useRef('');
   const wagerSettleKeyRef = useRef('');
+  const finishLockKeyRef = useRef('');
 
   // Wager hold: when a wagered online game starts, each player pays their
   // wager from their own balance, once per game. The room flag is the
@@ -125,6 +126,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
   }, [mode, room, roundKey, user.uid]);
 
   const handleFinish = (result: FinishResult) => {
+    if (mode === 'online' && room) {
+      const sKey = room.code + ':' + roundKey;
+      if (finishLockKeyRef.current === sKey) return;
+      finishLockKeyRef.current = sKey;
+    }
     const payout = g.payout || 50;
     let earnedPts = 0;
     let recordRes: 'w' | 'l' | 't' | null = null;
@@ -211,6 +217,71 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
       result: recordRes
     });
   };
+
+  // Forfeit settle (wagered online PvP only): if the opponent quits mid-game
+  // while status is 'playing', claim the win + 2x wager pot once and mark
+  // our own side settled + room 'over'. Guarded by wagerSettled,
+  // wagerSettleKeyRef, and finishLockKeyRef so it can never double-pay.
+  useEffect(() => {
+    if (mode !== 'online' || !room || finished) return;
+    const wager = room.wager || 0;
+    if (wager <= 0 || room.status !== 'playing' || room.state?.over) return;
+    if (room.forfeit?.[user.uid]) return;
+    const otherForfeited = (room.seats || []).some(
+      uid => uid !== user.uid && room.forfeit?.[uid] === true
+    );
+    if (!otherForfeited) return;
+    if (!room.wagerHeld?.[user.uid]) return;
+
+    const sKey = room.code + ':' + roundKey;
+    if (
+      room.wagerSettled?.[user.uid] ||
+      wagerSettleKeyRef.current === sKey ||
+      finishLockKeyRef.current === sKey
+    ) {
+      return;
+    }
+
+    wagerSettleKeyRef.current = sKey;
+    finishLockKeyRef.current = sKey;
+    const delta = wager * 2;
+    const credit = PVP_WIN_POINTS + delta;
+    setWagerDelta(delta);
+
+    OnlinePoints.add(user.uid, credit)
+      .then(() => onPointsUpdated())
+      .catch(() => {});
+    OnlinePoints.record(user.uid, gameId, 'w').catch(() => {});
+    Backend.db
+      .ref('pg_rooms/' + room.code)
+      .update({
+        status: 'over',
+        [`wagerSettled/${user.uid}`]: true
+      })
+      .catch(() => {});
+    Sound.win();
+    onPointsUpdated();
+
+    const forfeiterIdx = (room.seats || []).findIndex(
+      uid => uid !== user.uid && room.forfeit?.[uid] === true
+    );
+    const forfeiterName =
+      forfeiterIdx >= 0 ? names[forfeiterIdx] || 'Opponent' : 'Opponent';
+
+    setFinished({
+      winner: mySeat,
+      pts: PVP_WIN_POINTS,
+      result: 'w',
+      title: `${names[mySeat] || user.username} wins!`,
+      body: (
+        <div className="msg">
+          {forfeiterName} quit mid-game — you win by forfeit!
+        </div>
+      )
+    });
+    // onPointsUpdated is stable from App (refreshPoints).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, room, finished, roundKey, user.uid, user.username, mySeat, gameId, names]);
 
   // Online rematch coordination over the existing room doc:
   // 1) Each player tapping "Play again" records rematch/<uid>: true.
@@ -395,7 +466,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     const otherDeclined =
       mode === 'online' &&
       !!room &&
-      room.seats.some(uid => uid !== user.uid && room.rematch?.[uid] === false);
+      room.seats.some(
+        uid =>
+          uid !== user.uid &&
+          (room.rematch?.[uid] === false || room.forfeit?.[uid] === true)
+      );
     const otherWantsRematch =
       mode === 'online' &&
       !!room &&

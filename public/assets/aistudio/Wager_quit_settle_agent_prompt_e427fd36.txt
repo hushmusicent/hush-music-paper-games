@@ -1,0 +1,33 @@
+Settle a wagered PvP game when a player quits mid-game. Paste this into the AI Studio agent chat for the Hush Music Paper Games project.
+
+---
+
+The problem: in a wagered online PvP game, each player's wager is held at game start (OnlinePoints.add -wager, wagerHeld flag), but the wager only settles in handleFinish() in src/views/GameActiveView.tsx. Every quit path — the in-game Quit button / "Yes, quit" modal, "All games" from the results screen, handleQuitFromFinished() — calls onQuit() and leaves the room with no settle at all. So if someone quits mid-game, both wagers stay held forever: the quitter loses theirs, the player left behind loses theirs too, nobody gets the pot, and no win/loss is recorded.
+
+Where it is: src/views/GameActiveView.tsx — the wager hold effect, handleFinish() (the only settle), handleQuitFromFinished(), and the quit modal that calls onQuit(). src/App.tsx — quitGame() (leaves the room/voice). src/utils/net.ts holds the room doc (RoomDoc) and the push/listen helpers.
+
+### The rule (same as the other hubs)
+
+Quitting mid-game is a forfeit: the player who quits loses, the player left in the room wins and takes the pot.
+
+1. When a player quits a wagered online game while it is still in progress (status 'playing', game not finished), record the forfeit on the room doc before leaving — for example a `forfeit` map on the room with one entry per player uid (forfeit/<uid>: true) — and mark their own side settled (wagerSettled/<uid>: true) so their held wager is never refunded. Record their loss (OnlinePoints.record 'l') the same way handleFinish does for a loss.
+2. The player still in the room sees the opponent's forfeit on the room doc and settles as the winner, exactly like a normal win: one combined points write (the flat 200 ⭐ PvP win + the 2x wager pot), the win record, and wagerSettled/<uid>: true. Reuse the existing settle guards (room.wagerSettled flag + the settle key ref) so a forfeit win can never pay twice, and so it can never double-pay if the game also finishes normally.
+3. If the quitter taps quit from the results screen AFTER the game already finished, change nothing — that game already settled in handleFinish.
+4. If both players quit (nobody left in the room to claim the pot), just mark both sides settled with no payout — do not refund held wagers.
+
+### Details
+
+- Free games (wager 0): quitting works exactly as it does today. Change only the wagered online path.
+- Vs Computer, Pass & Play, and party games: leave quitting exactly as it is today.
+- Use the existing whole-state sync (Net.push / room state) for the forfeit marker — do not invent a second sync channel, and do not add presence/disconnect detection. This fix covers an explicit quit only.
+- The rematch flow stays as it is: quitting from the rematch-waiting state already cancels the rematch; that path is after a finished (already settled) game, so it must not settle again.
+
+### Do not touch
+
+- Do NOT change the points-store routing (online wins go to OnlinePoints, demo wins to AppStore), the wager hold at game start, the rematch reset, the lobby, the room-code flow, or any game rules.
+- Do NOT touch the Profile page hide fix in src/views/ProfileView.tsx or the session-restore fix in src/App.tsx.
+
+### Verify
+
+- Compile with zero errors. Then test a wagered 100 ⭐ online game in the preview with the stubbed/real RTDB: quit mid-game and confirm the quitter's total is 1000 → 900 (held, never returned) with a loss recorded, and the remaining player's total is 1000 → 900 (held) → 1300 (200 win + 200 pot) with a win recorded — and that quitting a second time, or quitting after a finished game, pays nothing extra.
+- If the GitHub push fails the same way as last time (not a git repository in /app/applet), say so plainly — the owner will push from AI Studio's GitHub integration.

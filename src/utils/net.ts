@@ -253,6 +253,7 @@ export interface RoomDoc {
   host: string;
   created: number;
   rematch?: Record<string, boolean>;
+  forfeit?: Record<string, boolean>;
   // Points wager (online PvP only, 0 = free game). Each player pays their
   // wager when the game starts (wagerHeld) and the winner takes the pot
   // (2x wager) at the finish, a tie refunds both (wagerSettled).
@@ -395,8 +396,12 @@ export const Net = {
     // Silent leave (quit mid-game) keeps the room so the player can rejoin.
     // A host leaving a waiting room removes it. Leaving a finished room
     // declines any pending rematch so the other player is not left waiting.
+    // Leaving a wagered game mid-play (status === 'playing', not over) is a
+    // forfeit: mark forfeit/<uid> and wagerSettled/<uid> so the held wager is
+    // not refunded and the opponent can claim the pot, and record the loss.
     const room = this.room;
     const uid = NetAuth.user?.uid;
+    const wager = room?.wager || 0;
     if (room && !silent && this.isHost() && room.status === 'waiting') {
       try {
         await Backend.db.ref('pg_rooms/' + room.code).remove();
@@ -407,6 +412,25 @@ export const Net = {
           .ref('pg_rooms/' + room.code + '/rematch/' + uid)
           .set(false)
           .catch(() => {});
+      } catch (e) {}
+    } else if (
+      room &&
+      room.status === 'playing' &&
+      !room.state?.over &&
+      wager > 0 &&
+      uid &&
+      !room.wagerSettled?.[uid] &&
+      !room.forfeit?.[uid]
+    ) {
+      try {
+        Backend.db
+          .ref('pg_rooms/' + room.code)
+          .update({
+            [`forfeit/${uid}`]: true,
+            [`wagerSettled/${uid}`]: true
+          })
+          .catch(() => {});
+        OnlinePoints.record(uid, room.game, 'l').catch(() => {});
       } catch (e) {}
     }
     this.stopListen();
