@@ -36,11 +36,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [canClaimFb, setCanClaimFb] = useState(false);
 
   // Online points/daily live on pg_users, so the claim check is async.
+  // Guests stay on the local store even in online mode — they have no
+  // Firebase user, so the pg_users read would fail and the bonus would
+  // never show as claimable.
+  const isGuest = !!user && AppStore.isGuest(user.uid);
   useEffect(() => {
-    if (user && Backend.mode === 'firebase') {
+    if (user && Backend.mode === 'firebase' && !isGuest) {
       OnlinePoints.canClaimDaily(user.uid).then(setCanClaimFb).catch(() => {});
     }
-  }, [user]);
+  }, [user, isGuest]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +80,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
       Sound.win();
       onLogin(res.user);
     }
+  };
+
+  const handleGuestLogin = () => {
+    const res = AppStore.guestLogin();
+    Sound.win();
+    onLogin(res.user);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -128,7 +138,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   const handleClaimBonus = async () => {
     if (!user) return;
-    if (Backend.mode === 'firebase') {
+    if (Backend.mode === 'firebase' && !isGuest) {
       if (await OnlinePoints.claimDaily(user.uid)) {
         Sound.win();
         setBonusClaimedNotice(true);
@@ -205,6 +215,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Online mode — accounts live on Firebase, same login on both phones.
             </div>
           )}
+          <button type="button" className="btn secondary" onClick={handleGuestLogin}>
+            👤 Continue as Guest
+          </button>
+          <div className="text-[var(--muted)] text-xs mt-2">
+            No account needed — play vs Computer and Pass &amp; Play on this
+            device. Sign up free to play online.
+          </div>
         </div>
 
         <div className="card">
@@ -285,7 +302,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }
 
   const canClaim =
-    Backend.mode === 'firebase' ? canClaimFb : AppStore.canClaimDaily(user.uid);
+    Backend.mode === 'firebase' && !isGuest ? canClaimFb : AppStore.canClaimDaily(user.uid);
 
   return (
     <div className="space-y-4">

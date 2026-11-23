@@ -55,7 +55,10 @@ export const App: React.FC = () => {
     const off = NetAuth.onUser(u => {
       setUser(u);
       if (u) {
-        if (Backend.mode === 'firebase') {
+        // Guests stay on the local store even in online mode — they have
+        // no Firebase user, so OnlinePoints.get would read nothing and
+        // the header would stick at 1000 after every win.
+        if (Backend.mode === 'firebase' && !AppStore.isGuest(u.uid)) {
           OnlinePoints.get(u.uid).then(setPoints).catch(() => {});
         } else {
           setPoints(AppStore.getPoints(u.uid));
@@ -90,7 +93,8 @@ export const App: React.FC = () => {
       // Same rule as the win payout: the total lives online when signed in
       // online, locally in demo mode. Reading the local store here would
       // flash the header to the demo fallback (1000) on an online account.
-      if (Backend.mode === 'firebase') {
+      // Guests are local even in online mode (no Firebase user).
+      if (Backend.mode === 'firebase' && !AppStore.isGuest(user.uid)) {
         OnlinePoints.get(user.uid).then(setPoints).catch(() => {});
       } else {
         setPoints(AppStore.getPoints(user.uid));
@@ -105,9 +109,20 @@ export const App: React.FC = () => {
     }, 3500);
   };
 
+  // Guests have no Firebase user, so they can never join an online room
+  // (Net.create/join need NetAuth.user). Stop them at the door with a
+  // clear message instead of letting them into a lobby that errors.
+  const guestOnlineBlock = (): boolean => {
+    if (user && AppStore.isGuest(user.uid)) {
+      showToast("Guests can't play online — log out and sign up free to join rooms.");
+      return true;
+    }
+    return false;
+  };
+
   const refreshPoints = () => {
     if (!user) return;
-    if (Backend.mode === 'firebase') {
+    if (Backend.mode === 'firebase' && !AppStore.isGuest(user.uid)) {
       OnlinePoints.get(user.uid).then(setPoints).catch(() => {});
     } else {
       setPoints(AppStore.getPoints(user.uid));
@@ -203,14 +218,19 @@ export const App: React.FC = () => {
               // 'online' goes to the lobby (create/join a room) — never
               // straight into a game with no room.
               if (mode === 'online') {
+                if (guestOnlineBlock()) return;
                 setCurrentView('lobby');
                 window.scrollTo(0, 0);
               } else {
                 handleStartGame(mode);
               }
             }}
-            onBrowseRooms={() => setCurrentView('rooms')}
+            onBrowseRooms={() => {
+              if (guestOnlineBlock()) return;
+              setCurrentView('rooms');
+            }}
             onOnlineLobby={() => {
+              if (guestOnlineBlock()) return;
               setCurrentView('lobby');
               window.scrollTo(0, 0);
             }}

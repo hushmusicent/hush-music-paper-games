@@ -10,11 +10,15 @@ interface LeaderboardViewProps {
 export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ user }) => {
   const [fbRows, setFbRows] = useState<BoardRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+  // Guests have no Firebase user, so the pg_users listener would get
+  // permission-denied and the board would spin on "Loading…" forever —
+  // they see the local board (seeded rivals + themselves) instead.
+  const isGuest = !!user && AppStore.isGuest(user.uid);
 
   // Live: the board stays attached to pg_users and re-renders whenever any
   // player's points change — it no longer fetches once and goes stale.
   useEffect(() => {
-    if (Backend.mode !== 'firebase') return;
+    if (Backend.mode !== 'firebase' || isGuest) return;
     let alive = true;
     setLoading(true);
     let unsub: () => void;
@@ -37,7 +41,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ user }) => {
     };
   }, [user?.uid]);
 
-  if (Backend.mode === 'firebase') {
+  if (Backend.mode === 'firebase' && !isGuest) {
     const rows = fbRows ?? [];
     return (
       <div className="space-y-3">

@@ -10,7 +10,9 @@ interface FriendsViewProps {
 }
 
 export const FriendsView: React.FC<FriendsViewProps> = ({ user }) => {
-  const online = Backend.mode === 'firebase';
+  // Guests have no Firebase user, so the online friends calls would fail
+  // silently — they get the local friends flow (seeded rivals accept).
+  const online = Backend.mode === 'firebase' && !AppStore.isGuest(user.uid);
   const [friends, setFriends] = useState(() => AppStore.getFriends(user.uid));
   const [requests, setRequests] = useState(() => AppStore.getFriendRequests(user.uid));
   const [sent, setSent] = useState(() => AppStore.getSentRequests(user.uid));
@@ -206,7 +208,9 @@ export const FriendsView: React.FC<FriendsViewProps> = ({ user }) => {
           <br />
           {online
             ? 'Share your code — any player can send you a friend request from any device (find codes on the Top 50 board).'
-            : 'Demo mode: friends on this device get requests in their inbox. The seeded Top-50 rivals also accept requests (find codes on the Top 50 board).'}
+            : AppStore.isGuest(user.uid)
+              ? 'Guest mode: add the seeded Top-50 rivals on this device (find codes on the Top 50 board). Sign up free to add real players.'
+              : 'Demo mode: friends on this device get requests in their inbox. The seeded Top-50 rivals also accept requests (find codes on the Top 50 board).'}
         </div>
 
         <input

@@ -20,7 +20,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onPointsUpdated
 }) => {
   // Online points/wins live on pg_users — load them; demo stays local.
-  const online = Backend.mode === 'firebase';
+  // Guests have no Firebase user, so the online reads would come back
+  // empty (0 points, no record) — they stay on the local store.
+  const online = Backend.mode === 'firebase' && !AppStore.isGuest(user.uid);
+  const isGuest = AppStore.isGuest(user.uid);
   const [fbProfile, setFbProfile] = useState<{
     points: number;
     wins: Record<string, UserStats>;
@@ -110,7 +113,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="text-[var(--muted)] text-xs pt-1">
           Points: <b className="text-[var(--cream)]">⭐ {points}</b> · Total
           wins: <b>{totalWins}</b> · Mode:{' '}
-          <b>{online ? 'Online (Firebase)' : 'Demo (this device)'}</b>
+          <b>{online ? 'Online (Firebase)' : isGuest ? 'Guest (this device)' : 'Demo (this device)'}</b>
         </div>
 
         {canClaim && (
@@ -188,6 +191,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {online ? (
         <div className="card">
           <div className="ok text-sm">✅ Firebase connected — online play is on.</div>
+        </div>
+      ) : isGuest ? (
+        <div className="card space-y-2">
+          <h3 className="font-bold text-base">🌐 Play online — free</h3>
+          <div className="text-xs text-[var(--muted)] leading-relaxed">
+            You&apos;re playing as a guest — your points and stats live only
+            on this device. Log out and sign up free (email + username) to
+            play online PvP, add friends, and keep your points on every phone.
+          </div>
         </div>
       ) : (
         <div className="card space-y-2">

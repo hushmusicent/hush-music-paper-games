@@ -119,6 +119,36 @@ export class AppStore {
     return { user: { uid: id, username, code } };
   }
 
+  // Guest accounts are local-only, one tap, no password: they play vs
+  // Computer and Pass & Play on this device. They never touch Firebase —
+  // their uid prefix is what keeps them on the local store (AppStore)
+  // instead of OnlinePoints, and out of App's boot-time local-session
+  // drop (which only drops 'local_' uids).
+  static isGuest(uid: string): boolean {
+    return uid.startsWith('guest_');
+  }
+
+  static guestLogin(): { user: User } {
+    const a = this.getAccounts();
+    const tag = String(Math.floor(1000 + Math.random() * 9000));
+    const id = 'guest_' + newCode().toLowerCase();
+    const code = newCode();
+    a[id] = {
+      username: 'Guest' + tag,
+      pw: '',
+      code,
+      points: START_POINTS,
+      winsObj: {},
+      lastDaily: 0,
+      friends: [],
+      requests: [],
+      sent: []
+    };
+    this.saveAccounts(a);
+    store.set('session', id);
+    return { user: { uid: id, username: 'Guest' + tag, code } };
+  }
+
   static demoLogin(username: string, pw?: string): { user?: User; error?: string } {
     this.ensureDemo();
     const a = this.getAccounts();

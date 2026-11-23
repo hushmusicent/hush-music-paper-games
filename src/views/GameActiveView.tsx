@@ -256,8 +256,11 @@ export const GameActiveView: React.FC<GameActiveViewProps> = ({
     // online total. The old code branched on the game mode, so PvC wins in
     // online mode went to AppStore.addPoints, which silently drops points
     // for a Firebase uid with no local account (and the record with it).
+    // Guests are the mirror image: they have no Firebase user, so
+    // OnlinePoints would read/write nothing and their wins would vanish
+    // — guests always stay on the local store.
     const credit = earnedPts + Math.max(0, delta);
-    const onlineAccount = Backend.mode === 'firebase';
+    const onlineAccount = Backend.mode === 'firebase' && !AppStore.isGuest(user.uid);
     if (credit > 0) {
       if (onlineAccount) {
         OnlinePoints.add(user.uid, credit);

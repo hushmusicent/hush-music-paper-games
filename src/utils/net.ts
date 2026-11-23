@@ -197,6 +197,10 @@ export const NetAuth = {
     try {
       await Backend.auth.signInWithEmailAndPassword(email, pw);
       await this.refreshProfile();
+      // Sign-in can succeed while the profile never lands (a failed
+      // pg_users read leaves this.user null) — without this the login
+      // form just sits there with no error and no login. Surface it.
+      if (!this.user) return 'Signed in, but your profile could not be loaded. Try again.';
       return null;
     } catch (e: any) {
       return (e && e.message) || 'Log in failed.';
