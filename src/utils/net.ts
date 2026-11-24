@@ -145,8 +145,34 @@ export const NetAuth = {
       let code = d.code || '';
       if (!code) {
         code = await this._mintCode();
+        // A profile node that does not exist yet cannot take a code-only
+        // write: the pg_users rule requires the node to hold username,
+        // code AND points, so writing just /code is rejected and the
+        // login dies here (sign-in works, profile never loads). Repair
+        // a missing profile the same way sign-up creates one — full row.
+        // A profile that exists but lost its code keeps its own points
+        // and wins; only the missing pieces are filled in, so the node
+        // still passes the rule and nothing earned is ever overwritten.
         const m: Record<string, any> = {};
-        m['pg_users/' + fbUser.uid + '/code'] = code;
+        if (Object.keys(d).length === 0) {
+          m['pg_users/' + fbUser.uid] = {
+            username: fbUser.displayName || 'Player',
+            email: (fbUser.email || '').toLowerCase(),
+            code,
+            points: START_POINTS,
+            wins: {},
+            created: Date.now(),
+            lastDaily: 0
+          };
+        } else {
+          m['pg_users/' + fbUser.uid + '/code'] = code;
+          if (!d.username) {
+            m['pg_users/' + fbUser.uid + '/username'] = fbUser.displayName || 'Player';
+          }
+          if (d.points === undefined || d.points === null) {
+            m['pg_users/' + fbUser.uid + '/points'] = START_POINTS;
+          }
+        }
         m['pg_codes/' + code] = fbUser.uid;
         await Backend.db.ref().update(m);
       }
